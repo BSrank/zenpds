@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZenAirpods - Премиум слушалки</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="logo">ZenAirpods</a>
+            <ul class="nav-links">
+                <li><a href="index.html" class="active">Начало</a></li>
+                <li><a href="products.html">Продукти</a></li>
+                <li><a href="#contact">Контакти</a></li>
+            </ul>
+            <button class="cart-btn" id="cartBtn">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="9" cy="21" r="1"></circle>
+                    <circle cx="20" cy="21" r="1"></circle>
+                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                </svg>
+                <span class="cart-count" id="cartCount">0</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Hero Section with Background Image -->
+    <section class="hero">
+        <div class="hero-content">
+            <h1 class="hero-title">
+                Премиум звук.<br>
+                Модерен дизайн.
+            </h1>
+            <p class="hero-subtitle">Комфорт и качество за всеки ден.</p>
+            <a href="products.html" class="cta-btn">Разгледай продукти</a>
+        </div>
+        <div class="hero-image">
+            <div class="hero-gradient"></div>
+        </div>
+    </section>
+
+    <!-- Features -->
+    <section class="features">
+        <div class="container">
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🎧</div>
+                    <h3>Най-ново поколение</h3>
+                    <p>Apple AirPods с активно шумопотискане</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">⚡</div>
+                    <h3>Бърза доставка</h3>
+                    <p>Econt и Speedy с наложен платеж</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">✓</div>
+                    <h3>Гаранция за качество</h3>
+                    <p>Проверка преди изпращане</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Contact -->
+    <section class="contact" id="contact">
+        <div class="container">
+            <h2>Свържи се с нас</h2>
+            <p>Имаш въпроси? Обади се или изпрати съобщение.</p>
+            <a href="tel:0876127997" class="phone-link">📞 0876 127 997</a>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 ZenAirpods. Всички права запазени.</p>
+        </div>
+    </footer>
+
+    <!-- Shopping Cart Modal -->
+    <div class="cart-modal" id="cartModal">
+        <div class="cart-overlay" id="cartOverlay"></div>
+        <div class="cart-content">
+            <div class="cart-header">
+                <h2>Количка</h2>
+                <button class="close-btn" id="closeCart">&times;</button>
+            </div>
+            
+            <div class="cart-items" id="cartItems">
+                <p class="empty-cart">Количката е празна</p>
+            </div>
+
+            <div class="cart-footer" id="cartFooter" style="display: none;">
+                <div class="cart-total">
+                    <span>Обща сума:</span>
+                    <span class="total-price" id="totalPrice">€0.00</span>
+                </div>
+                <button class="checkout-btn" id="checkoutBtn">Продължи към поръчка</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Checkout Modal -->
+    <div class="checkout-modal" id="checkoutModal">
+        <div class="checkout-overlay" id="checkoutOverlay"></div>
+        <div class="checkout-content">
+            <div class="checkout-header">
+                <h2>Завършване на поръчка</h2>
+                <button class="close-btn" id="closeCheckout">&times;</button>
+            </div>
+
+            <form class="checkout-form" id="checkoutForm">
+                <div class="form-group">
+                    <label for="courier">Куриер *</label>
+                    <select id="courier" name="courier" required>
+                        <option value="">Избери куриер</option>
+                        <option value="Econt">Econt</option>
+                        <option value="Speedy">Speedy</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="name">Име и фамилия *</label>
+                    <input type="text" id="name" name="name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="phone">Телефон *</label>
+                    <input type="tel" id="phone" name="phone" required placeholder="0888123456">
+                </div>
+
+                <div class="form-group">
+                    <label for="city">Град *</label>
+                    <input type="text" id="city" name="city" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="office" id="officeLabel">Офис на куриера *</label>
+                    <input type="text" id="office" name="office" required placeholder="Изберете куриер">
+                </div>
+
+                <div class="order-summary">
+                    <h3>Поръчка:</h3>
+                    <div id="orderSummary"></div>
+                    <div class="summary-total">
+                        <strong>Общо:</strong>
+                        <strong id="checkoutTotal">€0.00</strong>
+                    </div>
+                </div>
+
+                <button type="submit" class="submit-btn">Изпрати поръчка</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Success Message -->
+    <div class="success-message" id="successMessage">
+        <div class="success-content">
+            <div class="success-icon">✓</div>
+            <h3>Поръчката е изпратена успешно!</h3>
+            <p>Ще се свържем с вас скоро.</p>
+        </div>
+    </div>
+
+    <script src="cart.js"></script>
+</body>
+</html>

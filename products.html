@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Продукти - ZenAirpods</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="logo">ZenAirpods</a>
+            <ul class="nav-links">
+                <li><a href="index.html">Начало</a></li>
+                <li><a href="products.html" class="active">Продукти</a></li>
+                <li><a href="index.html#contact">Контакти</a></li>
+            </ul>
+            <button class="cart-btn" id="cartBtn">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="9" cy="21" r="1"></circle>
+                    <circle cx="20" cy="21" r="1"></circle>
+                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                </svg>
+                <span class="cart-count" id="cartCount">0</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Products Section -->
+    <section class="products-section">
+        <div class="container">
+            <h1 class="page-title">Нашите продукти</h1>
+            
+            <div class="products-grid">
+                <!-- Product 1: AirPods Pro 3 -->
+                <div class="product-card">
+                    <div class="product-image-section">
+                        <div class="product-image-main" id="mainImage-pro3">
+                            <!-- Main image will be loaded by JavaScript -->
+                        </div>
+                        <div class="product-thumbnails" id="thumbnails-pro3">
+                            <!-- Thumbnails will be loaded by JavaScript -->
+                        </div>
+                    </div>
+                    
+                    <div class="product-info">
+                        <h2 class="product-title">AirPods Pro 3 ANC</h2>
+                        <p class="product-price">€35.79 <span class="price-bgn">(70 лв)</span></p>
+                        
+                        <div class="product-features">
+                            <h3>Основни характеристики:</h3>
+                            <ul>
+                                <li><strong>Active Noise Cancellation (ANC)</strong> – ефективно шумопотискане</li>
+                                <li>Разпознават се автоматично от <strong>Apple устройства</strong></li>
+                                <li>Поддържат <strong>Find My</strong> и <strong>Hey Siri</strong></li>
+                                <li>Пълна съвместимост с <strong>iOS и Android</strong></li>
+                                <li>Автоматично свързване и стабилна <strong>Bluetooth</strong> връзка</li>
+                                <li>Отлично качество на звука и плътен бас</li>
+                            </ul>
+                            
+                            <h3>Батерия:</h3>
+                            <ul>
+                                <li>Над <strong>6 часа</strong> работа с едно зареждане</li>
+                                <li>Зареждащият кейс осигурява до <strong>4 допълнителни зареждания</strong></li>
+                            </ul>
+                            
+                            <h3>Допълнителна информация:</h3>
+                            <ul>
+                                <li>Най-високият клас слушалки на Apple от най-новото поколение</li>
+                                <li>Подходящи за <strong>разговори, музика и спорт</strong></li>
+                            </ul>
+                        </div>
+
+                        <div class="product-actions">
+                            <div class="quantity-selector">
+                                <button class="qty-btn minus" data-product="pro3">-</button>
+                                <input type="number" class="qty-input" id="qty-pro3" value="1" min="1" max="99">
+                                <button class="qty-btn plus" data-product="pro3">+</button>
+                            </div>
+                            <button class="add-to-cart-btn" data-product="pro3" data-name="AirPods Pro 3 ANC" data-price="35.79">
+                                Добави в количка
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Product 2: AirPods Gen 4 -->
+                <div class="product-card">
+                    <div class="product-image-section">
+                        <div class="product-image-main" id="mainImage-gen4">
+                            <!-- Main image will be loaded by JavaScript -->
+                        </div>
+                        <div class="product-thumbnails" id="thumbnails-gen4">
+                            <!-- Thumbnails will be loaded by JavaScript -->
+                        </div>
+                    </div>
+                    
+                    <div class="product-info">
+                        <h2 class="product-title">AirPods Gen 4 ANC</h2>
+                        <p class="product-price">€33.23 <span class="price-bgn">(65 лв)</span></p>
+                        
+                        <div class="product-features">
+                            <h3>Основни характеристики:</h3>
+                            <ul>
+                                <li><strong>Active Noise Cancellation (ANC)</strong> – ефективно шумопотискане</li>
+                                <li>Разпознават се автоматично от <strong>Apple устройства</strong></li>
+                                <li>Поддържат <strong>Find My</strong> и <strong>Hey Siri</strong></li>
+                                <li>Пълна съвместимост с <strong>iOS и Android</strong></li>
+                                <li>Автоматично свързване и стабилна <strong>Bluetooth</strong> връзка</li>
+                                <li>Отлично качество на звука и плътен бас</li>
+                            </ul>
+                            
+                            <h3>Батерия:</h3>
+                            <ul>
+                                <li>Над <strong>6 часа</strong> работа с едно зареждане</li>
+                                <li>Зареждащият кейс осигурява до <strong>4 допълнителни зареждания</strong></li>
+                            </ul>
+                            
+                            <h3>Допълнителна информация:</h3>
+                            <ul>
+                                <li>Най-новото поколение слушалки на Apple</li>
+                                <li>Подходящи за <strong>разговори, музика и спорт</strong></li>
+                            </ul>
+                        </div>
+
+                        <div class="product-actions">
+                            <div class="quantity-selector">
+                                <button class="qty-btn minus" data-product="gen4">-</button>
+                                <input type="number" class="qty-input" id="qty-gen4" value="1" min="1" max="99">
+                                <button class="qty-btn plus" data-product="gen4">+</button>
+                            </div>
+                            <button class="add-to-cart-btn" data-product="gen4" data-name="AirPods Gen 4 ANC" data-price="33.23">
+                                Добави в количка
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="contact-cta">
+                <h2>Имаш въпроси?</h2>
+                <p>Свържи се с нас за повече информация</p>
+                <a href="tel:0876127997" class="phone-link">📞 0876 127 997</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 ZenAirpods. Всички права запазени.</p>
+        </div>
+    </footer>
+
+    <!-- Shopping Cart Modal -->
+    <div class="cart-modal" id="cartModal">
+        <div class="cart-overlay" id="cartOverlay"></div>
+        <div class="cart-content">
+            <div class="cart-header">
+                <h2>Количка</h2>
+                <button class="close-btn" id="closeCart">&times;</button>
+            </div>
+            
+            <div class="cart-items" id="cartItems">
+                <p class="empty-cart">Количката е празна</p>
+            </div>
+
+            <div class="cart-footer" id="cartFooter" style="display: none;">
+                <div class="cart-total">
+                    <span>Обща сума:</span>
+                    <span class="total-price" id="totalPrice">€0.00</span>
+                </div>
+                <button class="checkout-btn" id="checkoutBtn">Продължи към поръчка</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Checkout Modal -->
+    <div class="checkout-modal" id="checkoutModal">
+        <div class="checkout-overlay" id="checkoutOverlay"></div>
+        <div class="checkout-content">
+            <div class="checkout-header">
+                <h2>Завършване на поръчка</h2>
+                <button class="close-btn" id="closeCheckout">&times;</button>
+            </div>
+
+            <form class="checkout-form" id="checkoutForm">
+                <div class="form-group">
+                    <label for="courier">Куриер *</label>
+                    <select id="courier" name="courier" required>
+                        <option value="">Избери куриер</option>
+                        <option value="Econt">Econt</option>
+                        <option value="Speedy">Speedy</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="name">Име и фамилия *</label>
+                    <input type="text" id="name" name="name" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="phone">Телефон *</label>
+                    <input type="tel" id="phone" name="phone" required placeholder="0888123456">
+                </div>
+
+                <div class="form-group">
+                    <label for="city">Град *</label>
+                    <input type="text" id="city" name="city" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="office" id="officeLabel">Офис на куриера *</label>
+                    <input type="text" id="office" name="office" required placeholder="Изберете куриер">
+                </div>
+
+                <div class="order-summary">
+                    <h3>Поръчка:</h3>
+                    <div id="orderSummary"></div>
+                    <div class="summary-total">
+                        <strong>Общо:</strong>
+                        <strong id="checkoutTotal">€0.00</strong>
+                    </div>
+                </div>
+
+                <button type="submit" class="submit-btn">Изпрати поръчка</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Success Message -->
+    <div class="success-message" id="successMessage">
+        <div class="success-content">
+            <div class="success-icon">✓</div>
+            <h3>Поръчката е изпратена успешно!</h3>
+            <p>Ще се свържем с вас скоро.</p>
+        </div>
+    </div>
+
+    <!-- Lightbox for Image Zoom -->
+    <div class="lightbox" id="lightbox">
+        <div class="lightbox-overlay" id="lightboxOverlay"></div>
+        <div class="lightbox-content">
+            <button class="lightbox-close" id="lightboxClose">&times;</button>
+            <button class="lightbox-prev" id="lightboxPrev">‹</button>
+            <img class="lightbox-image" id="lightboxImage" src="" alt="">
+            <button class="lightbox-next" id="lightboxNext">›</button>
+        </div>
+    </div>
+
+    <script src="cart.js"></script>
+</body>
+</html>
