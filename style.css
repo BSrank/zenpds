@@ -289,7 +289,7 @@ body {
 
 .products-grid {
     display: grid;
-    gap: 80px;
+    gap: 50px;
     margin-bottom: 80px;
 }
 
@@ -505,13 +505,13 @@ body {
 
 .product-features {
     flex: 1;
-    margin-bottom: 32px;
+    margin-bottom: 20px;
 }
 
 .product-features h3 {
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 600;
-    margin: 24px 0 12px 0;
+    margin: 16px 0 8px 0;
     color: var(--primary);
 }
 
@@ -521,11 +521,12 @@ body {
 }
 
 .product-features li {
-    padding: 8px 0;
+    padding: 4px 0;
     padding-left: 24px;
     position: relative;
     font-size: 14px;
     color: var(--text);
+    line-height: 1.4;
 }
 
 .product-features li::before {
