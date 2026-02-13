@@ -1064,11 +1064,13 @@ padding: 0 16px;
 /* Products section mobile */
 .products-section {
     padding: 40px 0;
+    background: #0a0a0a;
 }
 
 .page-title {
     font-size: 36px;
     margin-bottom: 40px;
+    color: var(--primary) !important;
 }
 
 .products-grid {
@@ -1079,6 +1081,7 @@ padding: 0 16px;
     grid-template-columns: 1fr;
     gap: 24px;
     padding: 24px;
+    background: #1a1a1a !important;
 }
 
 /* Product images mobile - MUCH SMALLER (centered, max 250px) */
@@ -1109,11 +1112,13 @@ padding: 0 16px;
 /* Product info mobile */
 .product-title {
     font-size: 28px;
+    color: var(--primary) !important;
 }
 
 .product-price {
     font-size: 26px;
     margin-bottom: 24px;
+    color: var(--accent) !important;
 }
 
 .price-bgn {
