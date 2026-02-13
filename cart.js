@@ -2,7 +2,7 @@
 // ВАЖНО: След като настроиш Google Sheets, замени с твоя Web App URL
 // Имейлът за нотификации е в Google Apps Script (private), не тук!
 const GOOGLE_SHEETS_CONFIG = {
-    webAppUrl: 'YOUR_WEB_APP_URL_HERE' // Замени с URL от Google Apps Script Deploy
+    webAppUrl: 'https://script.google.com/macros/s/AKfycbx7nA1SMkFUYMk6jPqjvQS2TGme5wmdfE75aBjud6ax-3twj_-D2n9CICeBr2XcFNA/exec' // Замени с URL от Google Apps Script Deploy
 };
 
 // ==================== PRODUCT IMAGE CONFIGURATION ====================
