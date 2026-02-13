@@ -295,8 +295,8 @@ body {
 
 .product-card {
     display: grid;
-    grid-template-columns: 1fr 1.5fr;
-    gap: 60px;
+    grid-template-columns: 1fr 2fr;
+    gap: 40px;
     background: #1a1a1a;
     border: 1px solid var(--border);
     border-radius: var(--radius);
@@ -325,6 +325,7 @@ body {
     overflow: hidden;
     position: relative;
     cursor: zoom-in;
+    max-width: 400px;
 }
 
 .product-image-main img {
