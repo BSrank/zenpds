@@ -455,6 +455,7 @@ async function handleCheckout(e) {
     const courier = formData.get('courier');
     const name = formData.get('name');
     const phone = formData.get('phone');
+    const email = formData.get('email') || ''; // Optional field
     const city = formData.get('city');
     const office = formData.get('office');
 
@@ -472,6 +473,7 @@ async function handleCheckout(e) {
         time: new Date().toLocaleTimeString('bg-BG'),
         name: name,
         phone: phone,
+        email: email,
         city: city,
         courier: courier,
         office: office,
