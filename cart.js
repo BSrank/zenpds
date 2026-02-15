@@ -460,7 +460,7 @@ async function handleCheckout(e) {
     const office = formData.get('office');
 
     const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const totalBGN = (total * 1.96).toFixed(2);
+    const totalBGN = Math.round(total * 1.95583);
 
     let orderItems = '';
     cart.forEach(item => {
