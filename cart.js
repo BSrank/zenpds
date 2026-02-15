@@ -2,7 +2,7 @@
 // ВАЖНО: След като настроиш Google Sheets, замени с твоя Web App URL
 // Имейлът за нотификации е в Google Apps Script (private), не тук!
 const GOOGLE_SHEETS_CONFIG = {
-    webAppUrl: 'https://script.google.com/macros/s/AKfycbx7nA1SMkFUYMk6jPqjvQS2TGme5wmdfE75aBjud6ax-3twj_-D2n9CICeBr2XcFNA/exec' // Замени с URL от Google Apps Script Deploy
+    webAppUrl: 'YOUR_WEB_APP_URL_HERE' // Замени с URL от Google Apps Script Deploy
 };
 
 // ==================== PRODUCT IMAGE CONFIGURATION ====================
@@ -28,6 +28,7 @@ window.addEventListener('DOMContentLoaded', () => {
     updateCartUI();
     setupEventListeners();
     loadProductImages();
+    loadPreviewImages(); // Load homepage preview images
 });
 
 // ==================== PRODUCT IMAGE LOADING ====================
@@ -548,5 +549,26 @@ function loadCart() {
     const savedCart = localStorage.getItem('zenairpods_cart');
     if (savedCart) {
         cart = JSON.parse(savedCart);
+    }
+}
+
+// ==================== LOAD PREVIEW IMAGES (Homepage) ====================
+async function loadPreviewImages() {
+    // Load AirPods Pro 3 preview
+    const pro3Preview = document.getElementById('previewImage-pro3');
+    if (pro3Preview) {
+        const pro3Exists = await checkImageExists('airpodspro3main.jpg');
+        if (pro3Exists) {
+            pro3Preview.innerHTML = '<img src="airpodspro3main.jpg" alt="AirPods Pro 3 ANC">';
+        }
+    }
+
+    // Load AirPods Gen 4 preview
+    const gen4Preview = document.getElementById('previewImage-gen4');
+    if (gen4Preview) {
+        const gen4Exists = await checkImageExists('airpods4genmain.jpg');
+        if (gen4Exists) {
+            gen4Preview.innerHTML = '<img src="airpods4genmain.jpg" alt="AirPods Gen 4 ANC">';
+        }
     }
 }
