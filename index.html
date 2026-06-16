@@ -28,6 +28,7 @@
                 <li><a href="index.html" class="active">Начало</a></li>
                 <li><a href="products.html">Продукти</a></li>
                 <li><a href="#contact">Контакти</a></li>
+                <li><a href="terms-of-service-условия.html">Terms of Service</a></li>
             </ul>
             <button class="cart-btn" id="cartBtn">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -126,6 +127,30 @@
         </div>
     </section>
 
+    <!-- Reviews Section -->
+    <section class="reviews-section">
+        <div class="container">
+            <h2 class="section-title">⭐ Какво казват клиентите ⭐</h2>
+            <div class="reviews-grid">
+                
+                <div class="review-card">
+                    <img src="reviews/review1.jpg" alt="Отзив от клиент" class="review-image" onclick="openReviewLightbox(this.src)">
+                </div>
+
+                <div class="review-card">
+                    <img src="reviews/review2.jpg" alt="Отзив от клиент" class="review-image" onclick="openReviewLightbox(this.src)">
+                </div>
+
+                <div class="review-card">
+                    <img src="reviews/review3.jpg" alt="Отзив от клиент" class="review-image" onclick="openReviewLightbox(this.src)">
+                </div>
+
+                <!-- За да добавиш още ревюта, просто копирай блока отгоре и промени номера -->
+                
+            </div>
+        </div>
+    </section>
+
     <!-- Contact -->
     <section class="contact" id="contact">
         <div class="container">
@@ -138,7 +163,7 @@
     <!-- Footer -->
     <footer class="footer">
         <div class="container">
-            <p>&copy; 2026 ZenAirpods. Всички права запазени.</p>
+            <p>&copy; 2026 ZenAirpods. Всички права запазени. &nbsp;|&nbsp; <a href="terms-of-service-условия.html" style="color: var(--text-light); text-decoration: underline;">Terms of Service</a></p>
             <p style="font-size: 12px; color: var(--text-light); margin-top: 8px;">
                 Този сайт използва cookies за статистика и подобряване на потребителското изживяване.
             </p>
@@ -237,6 +262,14 @@
             <div class="success-icon">✓</div>
             <h3>Поръчката е изпратена успешно!</h3>
             <p>Ще се свържем с вас скоро.</p>
+        </div>
+    </div>
+
+    <!-- Review Lightbox -->
+    <div class="review-lightbox" id="reviewLightbox">
+        <div class="review-lightbox-content">
+            <button class="review-lightbox-close" onclick="closeReviewLightbox()">&times;</button>
+            <img src="" alt="Review" class="review-lightbox-image" id="reviewLightboxImage">
         </div>
     </div>
 
