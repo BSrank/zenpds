@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Откажи поръчка — ZenAirpods</title>
+<link rel="stylesheet" href="style.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+.cancel-wrap{min-height:70vh;display:flex;align-items:center;justify-content:center;padding:4rem 24px;}
+.cancel-box{background:#111;border:1px solid var(--border);border-radius:var(--radius);padding:2.5rem;max-width:480px;width:100%;text-align:center;}
+.cancel-icon{font-size:2.8rem;margin-bottom:1.2rem;}
+.cancel-title{font-family:'DM Serif Display',serif;font-size:1.8rem;font-weight:400;color:var(--primary);margin-bottom:0.8rem;}
+.cancel-subtitle{font-size:0.9rem;color:var(--text-light);line-height:1.7;margin-bottom:1.8rem;}
+.order-info{background:#1a1a1a;border:1px solid var(--border);border-radius:8px;padding:1rem;margin-bottom:1.8rem;text-align:left;}
+.order-info p{font-size:0.82rem;color:var(--text-light);margin-bottom:0.3rem;}
+.order-info strong{color:var(--primary);}
+.btn-danger{width:100%;padding:14px;background:#e05252;color:#fff;border:none;font-size:0.8rem;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;border-radius:8px;font-family:'Inter',sans-serif;font-weight:500;margin-bottom:0.8rem;transition:var(--transition);}
+.btn-danger:hover{background:#c94444;}
+.btn-danger:disabled{opacity:0.5;cursor:not-allowed;}
+.btn-back{width:100%;padding:14px;background:transparent;color:var(--text-light);border:1px solid var(--border);font-size:0.8rem;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;border-radius:8px;font-family:'Inter',sans-serif;text-decoration:none;display:block;}
+.btn-back:hover{border-color:var(--text-light);color:var(--primary);}
+.success-title{font-family:'DM Serif Display',serif;font-size:1.6rem;font-weight:400;color:var(--success);margin-bottom:0.6rem;}
+.success-text{font-size:0.88rem;color:var(--text-light);line-height:1.7;}
+.error-box{background:rgba(224,82,82,0.1);border:1px solid rgba(224,82,82,0.3);border-left:3px solid #e05252;padding:1rem;border-radius:8px;font-size:0.85rem;margin-bottom:1.5rem;text-align:left;}
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="container">
+    <a href="index.html" class="logo">ZenAirpods</a>
+    <ul class="nav-links">
+      <li><a href="index.html">Начало</a></li>
+      <li><a href="products.html">Продукти</a></li>
+      <li><a href="index.html#contact">Контакти</a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="cancel-wrap">
+  <div class="cancel-box">
+    <div id="errorBox" class="error-box" style="display:none;"></div>
+
+    <div id="confirmContent">
+      <div class="cancel-icon">🛒</div>
+      <h1 class="cancel-title">Откажи поръчката</h1>
+      <p class="cancel-subtitle">Сигурен ли си, че искаш да откажеш поръчката? Това действие не може да бъде отменено.</p>
+      <div class="order-info" id="orderInfo" style="display:none;">
+        <p>Клиент: <strong id="infoName">—</strong></p>
+        <p>Продукти: <strong id="infoItems">—</strong></p>
+        <p>Сума: <strong id="infoTotal">—</strong></p>
+      </div>
+      <button class="btn-danger" id="cancelBtn" onclick="doCancel()">✕ Потвърди отказ</button>
+      <a class="btn-back" href="index.html">Върни се назад</a>
+    </div>
+
+    <div id="successContent" style="display:none;">
+      <div class="cancel-icon">✓</div>
+      <div class="success-title">Поръчката е отказана</div>
+      <div class="success-text">Поръчката ти е успешно отказана.<br>Ще получиш потвърждение на имейла си.</div>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>&copy; 2026 ZenAirpods. Всички права запазени.</p>
+  </div>
+</footer>
+
+<script>
+// Същият Script URL, който ползва cart.js за поръчките.
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzKj9ttuvCMJFF3DJuPBry15BuiLkWzLku2NwDDbtZS7oZ5jgHtQp1jl2d9bertHYYn/exec';
+
+const params = new URLSearchParams(window.location.search);
+const orderId = params.get('order');
+const token = params.get('token');
+
+async function init() {
+  if (!token || !orderId) {
+    showError('Невалиден линк. Моля използвай линка от имейла за поръчка.');
+    document.getElementById('cancelBtn').disabled = true;
+    return;
+  }
+  try {
+    const res = await fetch(SCRIPT_URL + '?action=verifyCancelToken&token=' + encodeURIComponent(token) + '&order=' + encodeURIComponent(orderId));
+    const data = await res.json();
+    if (!data.valid) {
+      showError(data.message || 'Невалиден или вече използван линк.');
+      document.getElementById('cancelBtn').disabled = true;
+      return;
+    }
+    const o = data.order || {};
+    if (o.name) {
+      document.getElementById('infoName').textContent = o.name;
+      document.getElementById('infoItems').textContent = o.items || '—';
+      document.getElementById('infoTotal').textContent = o.total || '—';
+      document.getElementById('orderInfo').style.display = 'block';
+    }
+  } catch (e) {
+    // Ако проверката се провали по мрежова причина, оставяме формата активна —
+    // истинската проверка пак ще се случи при самото потвърждение на отказа.
+  }
+}
+
+async function doCancel() {
+  const btn = document.getElementById('cancelBtn');
+  btn.disabled = true;
+  btn.textContent = 'Обработва се...';
+  try {
+    const res = await fetch(SCRIPT_URL + '?action=cancelOrder&token=' + encodeURIComponent(token) + '&order=' + encodeURIComponent(orderId));
+    const result = await res.json();
+    if (result.ok) {
+      document.getElementById('confirmContent').style.display = 'none';
+      document.getElementById('successContent').style.display = 'block';
+    } else {
+      showError(result.message || 'Грешка при обработка.');
+      btn.disabled = false;
+      btn.textContent = '✕ Потвърди отказ';
+    }
+  } catch (e) {
+    showError('Възникна грешка при връзката със сървъра. Моля опитай отново.');
+    btn.disabled = false;
+    btn.textContent = '✕ Потвърди отказ';
+  }
+}
+
+function showError(msg) {
+  const box = document.getElementById('errorBox');
+  box.textContent = msg;
+  box.style.display = 'block';
+}
+
+init();
+</script>
+</body>
+</html>
