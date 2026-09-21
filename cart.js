@@ -1,6 +1,5 @@
 // ==================== GOOGLE SHEETS CONFIGURATION ====================
-// ВАЖНО: След като настроиш Google Sheets, замени с твоя Web App URL
-// Имейлът за нотификации е в Google Apps Script (private), не тук!
+
 const GOOGLE_SHEETS_CONFIG = {
     webAppUrl: 'https://script.google.com/macros/s/AKfycbzKj9ttuvCMJFF3DJuPBry15BuiLkWzLku2NwDDbtZS7oZ5jgHtQp1jl2d9bertHYYn/exec' // Замени с URL от Google Apps Script Deploy
 };
@@ -435,9 +434,6 @@ function updateOfficeLabel() {
         if (courier === 'Econt') {
             officeLabel.textContent = 'Econt офис *';
             officeInput.placeholder = 'Напр: Econt офис София, ул. Витоша 5';
-        } else if (courier === 'Speedy') {
-            officeLabel.textContent = 'Speedy офис *';
-            officeInput.placeholder = 'Напр: Speedy офис София, бул. България 10';
         } else {
             officeLabel.textContent = 'Офис на куриера *';
             officeInput.placeholder = 'Изберете куриер';
