@@ -1,5 +1,6 @@
 // ==================== GOOGLE SHEETS CONFIGURATION ====================
-
+// ВАЖНО: След като настроиш Google Sheets, замени с твоя Web App URL
+// Имейлът за нотификации е в Google Apps Script (private), не тук!
 const GOOGLE_SHEETS_CONFIG = {
     webAppUrl: 'https://script.google.com/macros/s/AKfycbzKj9ttuvCMJFF3DJuPBry15BuiLkWzLku2NwDDbtZS7oZ5jgHtQp1jl2d9bertHYYn/exec' // Замени с URL от Google Apps Script Deploy
 };
@@ -42,34 +43,38 @@ async function loadImagesForProduct(productId) {
     const config = PRODUCT_IMAGES[productId];
     const mainImageContainer = document.getElementById(`mainImage-${productId}`);
     const thumbnailsContainer = document.getElementById(`thumbnails-${productId}`);
-    
+
     if (!mainImageContainer || !thumbnailsContainer) return;
 
-    const images = [];
-    
-    // Try to load main image
-    const mainImageExists = await checkImageExists(config.main);
-    if (mainImageExists) {
-        images.push(config.main);
+    // ВАЖНО: проверяваме основната снимка + номерираните снимки (1.jpg, 2.jpg, ...)
+    // ПАРАЛЕЛНО с Promise.all, вместо последователно (едно по едно с await в цикъл).
+    // Последователната проверка беше основната причина за бавното зареждане на
+    // снимките - всяка проверка чакаше предишната да приключи, вместо да тръгнат
+    // всички изведнъж.
+    const MAX_INDEX = 12;
+    const candidatePaths = [config.main];
+    for (let i = 1; i <= MAX_INDEX; i++) {
+        candidatePaths.push(`${config.prefix}.${i}.jpg`);
     }
-    
-    // Try to load additional images (1.jpg, 2.jpg, etc.)
-    let imageIndex = 1;
+
+    const results = await Promise.all(
+        candidatePaths.map(path => checkImageExists(path).then(exists => ({ path, exists })))
+    );
+
+    const images = [];
+    if (results[0].exists) images.push(results[0].path);
+
     let consecutiveFailures = 0;
-    
-    while (consecutiveFailures < 2 && imageIndex < 20) {
-        const imagePath = `${config.prefix}.${imageIndex}.jpg`;
-        const exists = await checkImageExists(imagePath);
-        
-        if (exists) {
-            images.push(imagePath);
+    for (let i = 1; i < results.length; i++) {
+        if (results[i].exists) {
+            images.push(results[i].path);
             consecutiveFailures = 0;
         } else {
             consecutiveFailures++;
+            if (consecutiveFailures >= 2) break;
         }
-        imageIndex++;
     }
-    
+
     // Display images
     if (images.length > 0) {
         displayProductImages(productId, images);
@@ -483,8 +488,15 @@ async function handleCheckout(e) {
     submitBtn.textContent = 'Изпращане...';
 
     try {
-        await sendToGoogleSheets(orderData);
-        
+        // ВАЖНО: НЕ чакаме (await) отговора от Google Apps Script тук.
+        // fetch-ът е с mode:'no-cors', така или иначе не можем да прочетем
+        // отговора му, а Apps Script изпраща 2 имейла ПРЕДИ да отговори -
+        // това бавеше показването на съобщението "Поръчката е приета" с по
+        // няколко секунди (чакахме целия round-trip, включително изпращането
+        // на имейлите от сървъра). Сега заявката тръгва във фонов режим, а
+        // съобщението за успех се показва веднага.
+        sendToGoogleSheets(orderData).catch(err => console.error('Грешка при изпращане към Google Sheets:', err));
+
         // Clear cart
         cart = [];
         saveCart();
