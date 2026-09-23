@@ -1,0 +1,122 @@
+{
+  "products": [
+    {
+      "id": "pro3",
+      "name": "AirPods Pro 3 ANC",
+      "price": 35.79,
+      "priceBgn": 70,
+      "comparePrice": 0,
+      "comparePriceBgn": 0,
+      "imageMain": "airpodspro3main.jpg",
+      "imagePrefix": "pro3",
+      "previewFeatures": [
+        "Active Noise Cancellation",
+        "Съвместимост с iOS и Android",
+        "6+ часа батерия"
+      ],
+      "sections": [
+        {
+          "title": "Основни характеристики:",
+          "items": [
+            "<strong>Active Noise Cancellation (ANC)</strong> – ефективно шумопотискане",
+            "Разпознават се автоматично от <strong>Apple устройства</strong>",
+            "Поддържат <strong>Find My</strong> и <strong>Hey Siri</strong>",
+            "Пълна съвместимост с <strong>iOS и Android</strong>",
+            "Автоматично свързване и стабилна <strong>Bluetooth</strong> връзка",
+            "Отлично качество на звука и плътен бас"
+          ]
+        },
+        {
+          "title": "Батерия:",
+          "items": [
+            "Над <strong>6 часа</strong> работа с едно зареждане",
+            "Зареждащият кейс осигурява до <strong>4 допълнителни зареждания</strong>"
+          ]
+        },
+        {
+          "title": "Допълнителна информация:",
+          "items": [
+            "Най-високият клас слушалки на Apple от най-новото поколение",
+            "Подходящи за <strong>разговори, музика и спорт</strong>"
+          ]
+        }
+      ],
+      "active": true
+    },
+    {
+      "id": "gen4",
+      "name": "AirPods Gen 4 ANC",
+      "price": 33.23,
+      "priceBgn": 65,
+      "comparePrice": 0,
+      "comparePriceBgn": 0,
+      "imageMain": "airpods4genmain.jpg",
+      "imagePrefix": "4gen",
+      "previewFeatures": [
+        "Active Noise Cancellation",
+        "Съвместимост с iOS и Android",
+        "6+ часа батерия"
+      ],
+      "sections": [
+        {
+          "title": "Основни характеристики:",
+          "items": [
+            "<strong>Active Noise Cancellation (ANC)</strong> – ефективно шумопотискане",
+            "Разпознават се автоматично от <strong>Apple устройства</strong>",
+            "Поддържат <strong>Find My</strong> и <strong>Hey Siri</strong>",
+            "Пълна съвместимост с <strong>iOS и Android</strong>",
+            "Автоматично свързване и стабилна <strong>Bluetooth</strong> връзка",
+            "Отлично качество на звука и плътен бас"
+          ]
+        },
+        {
+          "title": "Батерия:",
+          "items": [
+            "Над <strong>6 часа</strong> работа с едно зареждане",
+            "Зареждащият кейс осигурява до <strong>4 допълнителни зареждания</strong>"
+          ]
+        },
+        {
+          "title": "Допълнителна информация:",
+          "items": [
+            "Най-новото поколение слушалки на Apple",
+            "Подходящи за <strong>разговори, музика и спорт</strong>"
+          ]
+        }
+      ],
+      "active": true
+    }
+  ],
+  "settings": {
+    "siteName": "ZenAirpods",
+    "siteDomain": "https://zenairpods.store/",
+    "scriptUrlEncoded": "aHR0cHM6Ly9zY3JpcHQuZ29vZ2xlLmNvbS9tYWNyb3Mvcy9BS2Z5Y2J6S2o5dHR1dkNNSkZGM0RKdVBCcnkxNUJ1aUxrV3pMa3UyTndERGJ0WlM3b1o1amdIdFFwMWpsMmQ5YmVydEhZWW4vZXhlYw==",
+    "contactMode": "phone",
+    "phone": "0876 127 997",
+    "hours": "Всеки ден",
+    "showManualReviews": true,
+    "showClientReviews": false,
+    "manualReviews": [
+      {
+        "text": "Страхотни слушалки! Звукът е кристално чист и шумопотискането работи перфектно. Доставката беше светкавична. Препоръчвам!",
+        "author": "Мартин К., София",
+        "courier": "Econt"
+      },
+      {
+        "text": "Поръчах за подарък и останах приятно изненадан от качеството. Прегледахги на място при куриера и ги взех без колебание!",
+        "author": "Виктория П., Пловдив",
+        "courier": "Econt"
+      },
+      {
+        "text": "Използвам ги вече 2 седмици всеки ден. Батерията трае страхотно и връзката с телефона е моментална. Много доволен!",
+        "author": "Георги С., Варна",
+        "courier": "Econt"
+      },
+      {
+        "text": "Бърза доставка, качествен продукт и отлично обслужване. Ще поръчам отново за приятел!",
+        "author": "Симона Д., Бургас",
+        "courier": "Econt"
+      }
+    ]
+  }
+}
