@@ -330,6 +330,7 @@
 
   var products = [];
   var siteSettings = {};
+  var reviewsAdminData = []; // последно заредените ревюта от Sheets (за approveReview/deleteReview)
   var fileSha = null;
 
   async function loadProductsFromGitHub() {
@@ -671,7 +672,8 @@
     try {
       var res = await fetch(SCRIPT_URL + '?action=getReviews');
       var data = await res.json();
-      renderReviewsAdmin(data.reviews || []);
+      reviewsAdminData = data.reviews || [];
+      renderReviewsAdmin(reviewsAdminData);
     } catch(e) {
       document.getElementById('reviewsAdminLoading').textContent = 'Грешка при зареждане.';
     }
@@ -718,6 +720,15 @@
         } else {
           toast('Ревюто е одобрено!', 'success');
         }
+        // Кешираме одобреното ревю в products.json (settings.clientReviews), за да
+        // могат reviews.html/index.html да го показват МОМЕНТАЛНО от статичния файл
+        // (GitHub Pages CDN), вместо всеки посетител да чака бавна заявка към
+        // Apps Script при всяко отваряне на страницата.
+        var reviewObj = reviewsAdminData.find(function(r) { return String(r.id) === String(id); });
+        if (reviewObj) {
+          reviewObj.approved = true;
+          await cacheClientReviewInSettings_(reviewObj);
+        }
         loadReviewsAdmin();
       } else {
         toast('Грешка при одобрение', 'error');
@@ -730,8 +741,32 @@
     try {
       await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'deleteReview', id:id}) });
       toast('Ревюто е изтрито!', 'success');
+      await removeClientReviewFromSettings_(id);
       loadReviewsAdmin();
     } catch(e) { toast('Грешка', 'error'); }
+  }
+
+  // Добавя/обновява едно одобрено ревю в siteSettings.clientReviews и записва
+  // products.json в GitHub. Тихо е (без отделен toast) - основният toast вече
+  // е показан от approveReview() по-горе; тук само добавяме грешка, ако записът
+  // в GitHub се провали, за да не остане одобрението "невидимо" на сайта.
+  async function cacheClientReviewInSettings_(review) {
+    if (!siteSettings.clientReviews) siteSettings.clientReviews = [];
+    var idx = siteSettings.clientReviews.findIndex(function(r) { return String(r.id) === String(review.id); });
+    var cached = { id: review.id, text: review.text || '', name: review.name || '', date: review.date || '', rating: review.rating || 5 };
+    if (idx !== -1) siteSettings.clientReviews[idx] = cached;
+    else siteSettings.clientReviews.push(cached);
+    var result = await saveProductsToGitHub();
+    if (!result.ok) toast('Ревюто е одобрено, но записът в сайта се провали: ' + result.message, 'error');
+  }
+
+  async function removeClientReviewFromSettings_(id) {
+    if (!siteSettings.clientReviews || !siteSettings.clientReviews.length) return;
+    var before = siteSettings.clientReviews.length;
+    siteSettings.clientReviews = siteSettings.clientReviews.filter(function(r) { return String(r.id) !== String(id); });
+    if (siteSettings.clientReviews.length === before) return; // не е било кеширано - няма нужда от запис
+    var result = await saveProductsToGitHub();
+    if (!result.ok) toast('Ревюто е изтрито, но обновяването на сайта се провали: ' + result.message, 'error');
   }
 
   // ─── TOAST ───
