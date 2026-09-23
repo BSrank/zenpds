@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ревюта — ZenAirpods</title>
+<link rel="stylesheet" href="style.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+.reviews-hero{padding:3rem 6% 2rem;border-bottom:1px solid var(--border);}
+.reviews-eyebrow{font-size:0.62rem;letter-spacing:0.25em;text-transform:uppercase;color:var(--accent);margin-bottom:0.8rem;}
+.reviews-page-title{font-family:'DM Serif Display',serif;font-size:clamp(2rem,4vw,3rem);font-weight:400;color:var(--primary);margin-bottom:0.5rem;}
+.code-box{margin:2rem 6% 0;padding:1.4rem 1.6rem;background:#111;border:1px solid var(--border);border-radius:var(--radius);display:flex;align-items:center;gap:1rem;flex-wrap:wrap;}
+.code-box-text{flex:1;min-width:200px;}
+.code-box-title{font-size:0.85rem;color:var(--primary);margin-bottom:0.2rem;}
+.code-box-sub{font-size:0.72rem;color:var(--text-light);}
+.code-box-form{display:flex;gap:0.6rem;flex-wrap:wrap;}
+.code-box-form input{padding:10px 12px;background:#1a1a1a;border:1px solid var(--border);color:var(--primary);font-family:'Inter',sans-serif;font-size:0.85rem;border-radius:8px;outline:none;width:180px;}
+.code-box-form button{padding:10px 18px;background:var(--accent);color:#fff;border:none;font-size:0.72rem;letter-spacing:0.06em;text-transform:uppercase;cursor:pointer;border-radius:8px;font-family:'Inter',sans-serif;font-weight:500;white-space:nowrap;}
+.rgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:1rem;padding:2rem 6% 4rem;}
+.rcard{background:#111;border:1px solid var(--border);border-radius:var(--radius);padding:1.5rem;display:flex;flex-direction:column;gap:0.6rem;}
+.rstars{color:#e8b84d;font-size:1rem;letter-spacing:2px;}
+.rtext{font-size:0.85rem;color:var(--text-light);line-height:1.7;font-style:italic;flex:1;}
+.rauthor{font-size:0.82rem;font-weight:500;color:var(--primary);}
+.rdate{font-size:0.68rem;color:var(--text-light);}
+.rcourier{font-size:0.72rem;color:var(--accent);}
+.empty-state{text-align:center;padding:4rem 6%;color:var(--text-light);}
+.empty-icon{font-size:3rem;margin-bottom:1rem;}
+@media(max-width:600px){
+  .code-box{margin:1.5rem 5% 0;flex-direction:column;align-items:flex-start;}
+  .code-box-form{width:100%;}
+  .code-box-form input{flex:1;width:auto;}
+  .rgrid{padding:1.5rem 5% 3rem;grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="container">
+    <a href="index.html" class="logo">ZenAirpods</a>
+    <ul class="nav-links">
+      <li><a href="index.html">Начало</a></li>
+      <li><a href="products.html">Продукти</a></li>
+      <li><a href="index.html#contact">Контакти</a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="reviews-hero">
+  <div class="reviews-eyebrow">Клиентски мнения</div>
+  <h1 class="reviews-page-title">Ревюта</h1>
+</div>
+
+<div class="code-box">
+  <div class="code-box-text">
+    <div class="code-box-title">Имаш код за ревю от имейл покана?</div>
+    <div class="code-box-sub">Постави кода тук, за да оставиш ревю ръчно.</div>
+  </div>
+  <div class="code-box-form">
+    <input type="text" id="reviewCodeInput" placeholder="код от имейла" onkeydown="if(event.key==='Enter')goToReviewCode();" />
+    <button onclick="goToReviewCode()">Продължи</button>
+  </div>
+</div>
+
+<div class="rgrid" id="reviewsGrid">
+  <div class="empty-state">
+    <div class="empty-icon">⭐</div>
+    <p>Зарежда ревюта...</p>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>&copy; 2026 ZenAirpods. Всички права запазени.</p>
+  </div>
+</footer>
+
+<script>
+let SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzKj9ttuvCMJFF3DJuPBry15BuiLkWzLku2NwDDbtZS7oZ5jgHtQp1jl2d9bertHYYn/exec';
+
+async function loadScriptUrl() {
+  try {
+    const r = await fetch('products.json?t=' + Date.now());
+    const d = await r.json();
+    if (d.settings && d.settings.scriptUrlEncoded) {
+      SCRIPT_URL = atob(d.settings.scriptUrlEncoded);
+    }
+    return d.settings || {};
+  } catch(e) {
+    return {};
+  }
+}
+
+async function loadReviews() {
+  const settings = await loadScriptUrl();
+  let clientReviews = [];
+  if (settings.showClientReviews) {
+    try {
+      const rRes = await fetch(SCRIPT_URL + '?action=getReviews');
+      const rData = await rRes.json();
+      clientReviews = (rData.reviews || []).filter(r => r.approved);
+    } catch(e) {}
+  }
+
+  const manualReviews = settings.showManualReviews ? (settings.reviews || []).filter(r => r && r.text) : [];
+
+  renderReviews([...manualReviews, ...clientReviews]);
+}
+
+function renderReviews(reviews) {
+  const grid = document.getElementById('reviewsGrid');
+  if (!reviews.length) {
+    grid.innerHTML = '<div class="empty-state"><div class="empty-icon">⭐</div><p>Няма ревюта все още.</p></div>';
+    return;
+  }
+  grid.innerHTML = reviews.map(r =>
+    '<div class="rcard">' +
+      '<div class="rstars">★★★★★</div>' +
+      '<div class="rtext">"' + (r.text || '') + '"</div>' +
+      '<div class="rauthor">— ' + (r.author || r.name || '') + '</div>' +
+      (r.date ? '<div class="rdate">' + r.date + '</div>' : '') +
+      (r.courier ? '<div class="rcourier">' + r.courier + ' доставка ✓</div>' : '') +
+    '</div>'
+  ).join('');
+}
+
+function goToReviewCode() {
+  const val = document.getElementById('reviewCodeInput').value.trim();
+  if (!val) return;
+  window.location.href = 'review.html?token=' + encodeURIComponent(val);
+}
+
+loadReviews();
+</script>
+</body>
+</html>
