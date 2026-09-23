@@ -96,16 +96,13 @@ async function loadScriptUrl() {
 
 async function loadReviews() {
   const settings = await loadScriptUrl();
-  let clientReviews = [];
-  if (settings.showClientReviews) {
-    try {
-      const rRes = await fetch(SCRIPT_URL + '?action=getReviews');
-      const rData = await rRes.json();
-      clientReviews = (rData.reviews || []).filter(r => r.approved);
-    } catch(e) {}
-  }
-
-  const manualReviews = settings.showManualReviews ? (settings.reviews || []).filter(r => r && r.text) : [];
+  // ВАЖНО: клиентските ревюта се четат от кеша в products.json
+  // (settings.clientReviews), НЕ от директна заявка към Apps Script - това е
+  // мигновено (статичен файл през GitHub Pages CDN), вместо да чака бавния
+  // "cold start" на Apps Script при всяко отваряне на страницата. Кешът се
+  // обновява автоматично от admin панела при всяко одобрение/изтриване на ревю.
+  const clientReviews = settings.showClientReviews ? (settings.clientReviews || []) : [];
+  const manualReviews = settings.showManualReviews ? (settings.manualReviews || []).filter(r => r && r.text) : [];
 
   renderReviews([...manualReviews, ...clientReviews]);
 }
