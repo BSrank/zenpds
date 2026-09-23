@@ -46,22 +46,18 @@
         <div class="container">
             <h1 class="page-title">Нашите продукти</h1>
             
-            <div class="products-grid">
-                <!-- Product 1: AirPods Pro 3 -->
+            <div class="products-grid" id="productsGrid">
+                <!-- Статичен fallback - презаписва се динамично от products.json при
+                     успешно зареждане (виж cart.js). Ако products.json не се зареди
+                     по някаква причина, посетителите пак виждат тези продукти. -->
                 <div class="product-card" id="pro3">
                     <div class="product-image-section">
-                        <div class="product-image-main" id="mainImage-pro3">
-                            <!-- Main image will be loaded by JavaScript -->
-                        </div>
-                        <div class="product-thumbnails" id="thumbnails-pro3">
-                            <!-- Thumbnails will be loaded by JavaScript -->
-                        </div>
+                        <div class="product-image-main" id="mainImage-pro3"></div>
+                        <div class="product-thumbnails" id="thumbnails-pro3"></div>
                     </div>
-                    
                     <div class="product-info">
                         <h2 class="product-title">AirPods Pro 3 ANC</h2>
                         <p class="product-price">€35.79 <span class="price-bgn">(70 лв)</span></p>
-                        
                         <div class="product-features">
                             <h3>Основни характеристики:</h3>
                             <ul>
@@ -72,20 +68,17 @@
                                 <li>Автоматично свързване и стабилна <strong>Bluetooth</strong> връзка</li>
                                 <li>Отлично качество на звука и плътен бас</li>
                             </ul>
-                            
                             <h3>Батерия:</h3>
                             <ul>
                                 <li>Над <strong>6 часа</strong> работа с едно зареждане</li>
                                 <li>Зареждащият кейс осигурява до <strong>4 допълнителни зареждания</strong></li>
                             </ul>
-                            
                             <h3>Допълнителна информация:</h3>
                             <ul>
                                 <li>Най-високият клас слушалки на Apple от най-новото поколение</li>
                                 <li>Подходящи за <strong>разговори, музика и спорт</strong></li>
                             </ul>
                         </div>
-
                         <div class="product-actions">
                             <div class="quantity-selector">
                                 <button class="qty-btn minus" data-product="pro3">-</button>
@@ -99,21 +92,14 @@
                     </div>
                 </div>
 
-                <!-- Product 2: AirPods Gen 4 -->
                 <div class="product-card" id="gen4">
                     <div class="product-image-section">
-                        <div class="product-image-main" id="mainImage-gen4">
-                            <!-- Main image will be loaded by JavaScript -->
-                        </div>
-                        <div class="product-thumbnails" id="thumbnails-gen4">
-                            <!-- Thumbnails will be loaded by JavaScript -->
-                        </div>
+                        <div class="product-image-main" id="mainImage-gen4"></div>
+                        <div class="product-thumbnails" id="thumbnails-gen4"></div>
                     </div>
-                    
                     <div class="product-info">
                         <h2 class="product-title">AirPods Gen 4 ANC</h2>
                         <p class="product-price">€33.23 <span class="price-bgn">(65 лв)</span></p>
-                        
                         <div class="product-features">
                             <h3>Основни характеристики:</h3>
                             <ul>
@@ -124,20 +110,17 @@
                                 <li>Автоматично свързване и стабилна <strong>Bluetooth</strong> връзка</li>
                                 <li>Отлично качество на звука и плътен бас</li>
                             </ul>
-                            
                             <h3>Батерия:</h3>
                             <ul>
                                 <li>Над <strong>6 часа</strong> работа с едно зареждане</li>
                                 <li>Зареждащият кейс осигурява до <strong>4 допълнителни зареждания</strong></li>
                             </ul>
-                            
                             <h3>Допълнителна информация:</h3>
                             <ul>
                                 <li>Най-новото поколение слушалки на Apple</li>
                                 <li>Подходящи за <strong>разговори, музика и спорт</strong></li>
                             </ul>
                         </div>
-
                         <div class="product-actions">
                             <div class="quantity-selector">
                                 <button class="qty-btn minus" data-product="gen4">-</button>
@@ -155,7 +138,9 @@
             <div class="contact-cta">
                 <h2>Имаш въпроси?</h2>
                 <p>Свържи се с нас за повече информация</p>
-                <a href="tel:0876127997" class="phone-link">📞 0876 127 997</a>
+                <div id="contactCtaDynamic">
+                    <!-- Телефон или контактна форма - зарежда се динамично от products.json -->
+                </div>
             </div>
         </div>
     </section>
