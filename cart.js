@@ -606,11 +606,70 @@ function closeCartModal() {
     }
 }
 
-// ==================== CHECKOUT ====================
-function openCheckout() {
-    closeCartModal();
+// ==================== ПРОМОКОД / НАГРАДА ЗА РЕВЮ ====================
+// appliedPromo = { code, type: 'discount'|'case', value } | null
+let appliedPromo = null;
 
-    const checkoutModal = document.getElementById('checkoutModal');
+function cartRawTotal() {
+    return cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+}
+
+function finalCheckoutTotal() {
+    const raw = cartRawTotal();
+    if (appliedPromo && appliedPromo.type === 'discount') {
+        return Math.max(0, raw * (1 - (parseFloat(appliedPromo.value) || 0) / 100));
+    }
+    return raw;
+}
+
+function resetPromoUI() {
+    appliedPromo = null;
+    const input = document.getElementById('promoCodeInput');
+    const btn = document.getElementById('promoApplyBtn');
+    const status = document.getElementById('promoStatus');
+    if (input) { input.value = ''; input.disabled = false; }
+    if (btn) { btn.style.display = ''; btn.disabled = false; btn.textContent = 'Приложи'; }
+    if (status) { status.style.display = 'none'; status.textContent = ''; }
+}
+
+async function applyPromoCode() {
+    const input = document.getElementById('promoCodeInput');
+    const status = document.getElementById('promoStatus');
+    if (!input || !status) return;
+    const code = input.value.trim().toUpperCase();
+    if (!code) return;
+    const btn = document.getElementById('promoApplyBtn');
+    btn.disabled = true;
+    btn.textContent = '...';
+    try {
+        const res = await fetch(GOOGLE_SHEETS_CONFIG.webAppUrl + '?action=verifyPromoCode&code=' + encodeURIComponent(code));
+        const data = await res.json();
+        if (data.valid) {
+            appliedPromo = { code, type: data.type, value: data.value };
+            status.style.display = 'block';
+            status.style.color = 'var(--success)';
+            status.textContent = data.type === 'case'
+                ? '✓ Приложен код: безплатен силиконов кейс при тази поръчка!'
+                : '✓ Приложен код: -' + data.value + '% отстъпка!';
+            input.disabled = true;
+            btn.style.display = 'none';
+        } else {
+            appliedPromo = null;
+            status.style.display = 'block';
+            status.style.color = '#e05252';
+            status.textContent = data.message || 'Невалиден код.';
+        }
+    } catch (e) {
+        status.style.display = 'block';
+        status.style.color = '#e05252';
+        status.textContent = 'Грешка при проверка на кода. Опитай пак.';
+    }
+    btn.disabled = false;
+    if (btn.style.display !== 'none') btn.textContent = 'Приложи';
+    renderCheckoutSummary();
+}
+
+function renderCheckoutSummary() {
     const orderSummary = document.getElementById('orderSummary');
     const checkoutTotal = document.getElementById('checkoutTotal');
 
@@ -624,16 +683,33 @@ function openCheckout() {
             </div>
         `;
     });
-
-    if (orderSummary) {
-        orderSummary.innerHTML = summaryHTML;
+    if (appliedPromo && appliedPromo.type === 'discount') {
+        summaryHTML += `
+            <div class="summary-item" style="color:var(--accent);">
+                <span>🎁 Промокод ${appliedPromo.code}</span>
+                <span>-${appliedPromo.value}%</span>
+            </div>
+        `;
+    } else if (appliedPromo && appliedPromo.type === 'case') {
+        summaryHTML += `
+            <div class="summary-item" style="color:var(--accent);">
+                <span>🎁 Награда</span>
+                <span>Безплатен кейс</span>
+            </div>
+        `;
     }
 
-    const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    if (checkoutTotal) {
-        checkoutTotal.textContent = `€${total.toFixed(2)}`;
-    }
+    if (orderSummary) orderSummary.innerHTML = summaryHTML;
+    if (checkoutTotal) checkoutTotal.textContent = `€${finalCheckoutTotal().toFixed(2)}`;
+}
 
+// ==================== CHECKOUT ====================
+function openCheckout() {
+    closeCartModal();
+    resetPromoUI();
+    renderCheckoutSummary();
+
+    const checkoutModal = document.getElementById('checkoutModal');
     if (checkoutModal) {
         checkoutModal.classList.add('active');
         document.body.style.overflow = 'hidden';
@@ -679,8 +755,10 @@ async function handleCheckout(e) {
     const city = formData.get('city');
     const office = formData.get('office');
 
-    const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const totalBGN = Math.round(total * 1.95583);
+    // ВАЖНО: изпращаме СУРОВАТА сума (преди отстъпка) - самата отстъпка се
+    // пресмята на сървъра (Code.gs), за да не може някой да я подправи от
+    // конзолата на браузъра. За показване/имейли сървърът смята EUR+BGN сам.
+    const subtotal = cartRawTotal();
 
     let orderItems = '';
     cart.forEach(item => {
@@ -698,8 +776,8 @@ async function handleCheckout(e) {
         courier: courier,
         office: office,
         products: orderItems.trim(),
-        totalEur: `€${total.toFixed(2)}`,
-        totalBgn: `${totalBGN} лв`
+        subtotalEur: subtotal.toFixed(2),
+        promoCode: appliedPromo ? appliedPromo.code : ''
     };
 
     const submitBtn = form.querySelector('.submit-btn');
@@ -707,19 +785,21 @@ async function handleCheckout(e) {
     submitBtn.textContent = 'Изпращане...';
 
     try {
-        // ВАЖНО: НЕ чакаме (await) отговора от Google Apps Script тук.
-        // fetch-ът е с mode:'no-cors', така или иначе не можем да прочетем
-        // отговора му, а Apps Script изпраща 2 имейла ПРЕДИ да отговори -
-        // това бавеше показването на съобщението "Поръчката е приета" с по
-        // няколко секунди (чакахме целия round-trip, включително изпращането
-        // на имейлите от сървъра). Сега заявката тръгва във фонов режим, а
-        // съобщението за успех се показва веднага.
-        sendToGoogleSheets(orderData).catch(err => console.error('Грешка при изпращане към Google Sheets:', err));
+        // ВАЖНО: тук ЧАКАМЕ (await) реалния отговор от Google Apps Script -
+        // за разлика от преди, вече не можем да сме "fire and forget", защото
+        // трябва да сме сигурни, че промокодът реално е бил приложен (и да
+        // покажем грешка на клиента, ако нещо се провали), преди да изчистим
+        // количката и да покажем съобщение за успех.
+        const result = await sendToGoogleSheets(orderData);
+        if (!result || result.success !== true) {
+            throw new Error('Сървърът не потвърди поръчката.');
+        }
 
         // Clear cart
         cart = [];
         saveCart();
         updateCartUI();
+        resetPromoUI();
 
         // Close checkout modal
         closeCheckoutModal();
@@ -742,20 +822,18 @@ async function sendToGoogleSheets(orderData) {
     if (GOOGLE_SHEETS_CONFIG.webAppUrl === 'YOUR_WEB_APP_URL_HERE') {
         console.warn('Google Sheets не е конфигуриран още!');
         // За тестване приемаме че е успешно
-        return Promise.resolve();
+        return { success: true };
     }
 
     const response = await fetch(GOOGLE_SHEETS_CONFIG.webAppUrl, {
         method: 'POST',
-        mode: 'no-cors',
         headers: {
-            'Content-Type': 'application/json',
+            'Content-Type': 'text/plain;charset=utf-8',
         },
         body: JSON.stringify(orderData)
     });
 
-    // no-cors mode doesn't allow reading response, so we just assume success
-    return Promise.resolve();
+    return response.json();
 }
 
 function showSuccessMessage() {
