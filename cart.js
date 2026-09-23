@@ -53,12 +53,12 @@ function findProduct(id) {
 }
 
 function formatPriceHTML(product) {
+    // Цената се показва само в евро - без "(X лв)" по изричен избор.
     const hasDiscount = product.comparePrice && product.comparePrice > product.price;
     const eur = '€' + Number(product.price).toFixed(2);
-    const bgn = product.priceBgn ? ' <span class="price-bgn">(' + product.priceBgn + ' лв)</span>' : '';
-    if (!hasDiscount) return eur + bgn;
+    if (!hasDiscount) return eur;
     const compareEur = '€' + Number(product.comparePrice).toFixed(2);
-    return '<span style="text-decoration:line-through;color:var(--text-light);font-size:0.85em;margin-right:8px;">' + compareEur + '</span>' + eur + bgn;
+    return '<span style="text-decoration:line-through;color:var(--text-light);font-size:0.85em;margin-right:8px;">' + compareEur + '</span>' + eur;
 }
 
 // ==================== DYNAMIC RENDERING (index.html / products.html) ====================
@@ -87,7 +87,7 @@ function renderProductsPreview() {
             '</div>' +
             '<div class="product-preview-info">' +
                 '<h3 class="product-preview-title">' + p.name + '</h3>' +
-                '<p class="product-preview-price">' + formatPriceHTML(p).replace('price-bgn', 'price-preview-bgn') + '</p>' +
+                '<p class="product-preview-price">' + formatPriceHTML(p) + '</p>' +
                 '<ul class="product-preview-features">' + featuresHTML + '</ul>' +
                 '<span class="preview-cta">Виж повече →</span>' +
             '</div>' +
@@ -130,9 +130,15 @@ function renderProductsGrid() {
 }
 
 // ---- Ревюта (index.html) ----
+// На началната страница показваме само ограничен брой ревюта (за да не се
+// удължава страницата безкрайно) - пълният списък е на reviews.html, към
+// която винаги показваме връзка "Виж всички ревюта", докато секцията е видима.
+const HOMEPAGE_REVIEWS_LIMIT = 6;
+
 function renderReviewsSection() {
     const section = document.getElementById('reviewsSection');
     const grid = document.getElementById('reviewsGrid');
+    const moreLink = document.getElementById('reviewsMoreLink');
     if (!section || !grid) return;
 
     const manualReviews = SITE_SETTINGS.showManualReviews ? (SITE_SETTINGS.manualReviews || []).filter(r => r && r.text) : [];
@@ -143,8 +149,10 @@ function renderReviewsSection() {
         return;
     }
     section.style.display = 'block';
+    if (moreLink) moreLink.style.display = 'block';
 
-    grid.innerHTML = manualReviews.map(r =>
+    const shownManual = manualReviews.slice(0, HOMEPAGE_REVIEWS_LIMIT);
+    grid.innerHTML = shownManual.map(r =>
         '<div class="review-card review-text-card">' +
             '<div class="review-stars">⭐⭐⭐⭐⭐</div>' +
             '<p class="review-text">"' + r.text + '"</p>' +
@@ -154,21 +162,27 @@ function renderReviewsSection() {
     ).join('');
 
     if (showClient) {
-        fetch(GOOGLE_SHEETS_CONFIG.webAppUrl + '?action=getReviews')
-            .then(r => r.json())
-            .then(data => {
-                const clientReviews = (data.reviews || []).filter(r => r.approved).slice(0, 6);
-                clientReviews.forEach(r => {
-                    const card = document.createElement('div');
-                    card.className = 'review-card review-text-card';
-                    card.innerHTML = '<div class="review-stars">⭐⭐⭐⭐⭐</div>' +
-                        '<p class="review-text">"' + (r.text || '') + '"</p>' +
-                        '<p class="review-author">— ' + (r.name || '') + '</p>' +
-                        (r.date ? '<p class="review-source">' + r.date + '</p>' : '');
-                    grid.appendChild(card);
-                });
-                if (!manualReviews.length && !clientReviews.length) section.style.display = 'none';
-            }).catch(() => {});
+        const remainingSlots = Math.max(0, HOMEPAGE_REVIEWS_LIMIT - shownManual.length);
+        if (remainingSlots > 0) {
+            fetch(GOOGLE_SHEETS_CONFIG.webAppUrl + '?action=getReviews')
+                .then(r => r.json())
+                .then(data => {
+                    const clientReviews = (data.reviews || []).filter(r => r.approved).slice(0, remainingSlots);
+                    clientReviews.forEach(r => {
+                        const card = document.createElement('div');
+                        card.className = 'review-card review-text-card';
+                        card.innerHTML = '<div class="review-stars">⭐⭐⭐⭐⭐</div>' +
+                            '<p class="review-text">"' + (r.text || '') + '"</p>' +
+                            '<p class="review-author">— ' + (r.name || '') + '</p>' +
+                            (r.date ? '<p class="review-source">' + r.date + '</p>' : '');
+                        grid.appendChild(card);
+                    });
+                    if (!shownManual.length && !clientReviews.length) {
+                        section.style.display = 'none';
+                        if (moreLink) moreLink.style.display = 'none';
+                    }
+                }).catch(() => {});
+        }
     }
 }
 
