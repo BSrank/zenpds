@@ -162,26 +162,26 @@ function renderReviewsSection() {
     ).join('');
 
     if (showClient) {
+        // ВАЖНО: реалните клиентски ревюта НЕ се четат от Apps Script при всяко
+        // зареждане на страницата (това беше бавно - Apps Script "cold start" +
+        // 302 пренасочване можеше да отнеме секунди). Вместо това, при всяко
+        // одобрение на ревю от admin панела, ревюто се кешира директно в
+        // products.json (settings.clientReviews) и се качва в GitHub - оттам
+        // насетне идва мигновено, заедно с продуктите, през GitHub Pages CDN.
         const remainingSlots = Math.max(0, HOMEPAGE_REVIEWS_LIMIT - shownManual.length);
-        if (remainingSlots > 0) {
-            fetch(GOOGLE_SHEETS_CONFIG.webAppUrl + '?action=getReviews')
-                .then(r => r.json())
-                .then(data => {
-                    const clientReviews = (data.reviews || []).filter(r => r.approved).slice(0, remainingSlots);
-                    clientReviews.forEach(r => {
-                        const card = document.createElement('div');
-                        card.className = 'review-card review-text-card';
-                        card.innerHTML = '<div class="review-stars">⭐⭐⭐⭐⭐</div>' +
-                            '<p class="review-text">"' + (r.text || '') + '"</p>' +
-                            '<p class="review-author">— ' + (r.name || '') + '</p>' +
-                            (r.date ? '<p class="review-source">' + r.date + '</p>' : '');
-                        grid.appendChild(card);
-                    });
-                    if (!shownManual.length && !clientReviews.length) {
-                        section.style.display = 'none';
-                        if (moreLink) moreLink.style.display = 'none';
-                    }
-                }).catch(() => {});
+        const clientReviews = (SITE_SETTINGS.clientReviews || []).slice(0, remainingSlots);
+        clientReviews.forEach(r => {
+            const card = document.createElement('div');
+            card.className = 'review-card review-text-card';
+            card.innerHTML = '<div class="review-stars">⭐⭐⭐⭐⭐</div>' +
+                '<p class="review-text">"' + (r.text || '') + '"</p>' +
+                '<p class="review-author">— ' + (r.name || '') + '</p>' +
+                (r.date ? '<p class="review-source">' + r.date + '</p>' : '');
+            grid.appendChild(card);
+        });
+        if (!shownManual.length && !clientReviews.length) {
+            section.style.display = 'none';
+            if (moreLink) moreLink.style.display = 'none';
         }
     }
 }
