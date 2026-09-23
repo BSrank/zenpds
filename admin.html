@@ -143,10 +143,11 @@
         <button class="btn btn-ghost" onclick="ordersLoaded=false;loadOrders();">↻ Обнови</button>
       </div>
       <p class="loading-note" id="ordersLoading">Зареждане...</p>
+      <p style="font-size:0.72rem;color:var(--muted);margin-bottom:0.6rem;">💡 Таблицата е широка — скролни хоризонтално (наляво/надясно) в кутията по-долу, ако не виждаш всички колони.</p>
       <div class="card" style="overflow-x:auto;display:none;" id="ordersTableWrap">
         <table class="orders-table">
           <thead><tr>
-            <th>Дата</th><th>Клиент</th><th>Имейл</th><th>Телефон</th><th>Доставка</th><th>Продукти</th><th>Сума</th><th>Статус</th><th>Ревю</th>
+            <th>Дата</th><th>Клиент</th><th style="color:var(--accent);">Покана за ревю</th><th>Имейл</th><th>Телефон</th><th>Доставка</th><th>Продукти</th><th>Сума</th><th>Статус</th>
           </tr></thead>
           <tbody id="ordersBody"></tbody>
         </table>
@@ -487,13 +488,13 @@
       return '<tr>' +
         '<td>' + (o.date||'—') + '<br><small style="color:var(--muted)">' + (o.time||'') + '</small></td>' +
         '<td>' + (o.name||'—') + '</td>' +
+        '<td>' + reviewCell + '</td>' +
         '<td style="font-size:0.75rem;">' + (o.email||'—') + '</td>' +
         '<td>' + (o.phone||'—') + '</td>' +
         '<td>' + (o.courier||'—') + '<br><small style="color:var(--muted)">' + (o.city||'') + ' · ' + (o.office||'') + '</small></td>' +
         '<td><div class="order-items-list">' + (o.products||'') + '</div></td>' +
         '<td style="color:var(--accent)">' + (o.totalEur||'—') + '<br><small>' + (o.totalBgn||'') + '</small></td>' +
         '<td>' + (o.status||'Нова') + '</td>' +
-        '<td>' + reviewCell + '</td>' +
       '</tr>';
     }).join('');
   }
