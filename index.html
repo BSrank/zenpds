@@ -83,84 +83,18 @@
     <section class="products-preview">
         <div class="container">
             <h2 class="section-title">Нашите продукти</h2>
-            <div class="products-preview-grid">
-                <!-- Product 1: AirPods Pro 3 -->
-                <a href="products.html#pro3" class="product-preview-card">
-                    <div class="product-preview-image" id="previewImage-pro3">
-                        <!-- Image will be loaded by JavaScript -->
-                        <div class="product-image-placeholder">
-                            AirPods<br>Pro 3
-                        </div>
-                    </div>
-                    <div class="product-preview-info">
-                        <h3 class="product-preview-title">AirPods Pro 3 ANC</h3>
-                        <p class="product-preview-price">€35.79 <span class="price-preview-bgn">(70 лв)</span></p>
-                        <ul class="product-preview-features">
-                            <li>Active Noise Cancellation</li>
-                            <li>Съвместимост с iOS и Android</li>
-                            <li>6+ часа батерия</li>
-                        </ul>
-                        <span class="preview-cta">Виж повече →</span>
-                    </div>
-                </a>
-
-                <!-- Product 2: AirPods Gen 4 -->
-                <a href="products.html#gen4" class="product-preview-card">
-                    <div class="product-preview-image" id="previewImage-gen4">
-                        <!-- Image will be loaded by JavaScript -->
-                        <div class="product-image-placeholder">
-                            AirPods<br>Gen 4
-                        </div>
-                    </div>
-                    <div class="product-preview-info">
-                        <h3 class="product-preview-title">AirPods Gen 4 ANC</h3>
-                        <p class="product-preview-price">€33.23 <span class="price-preview-bgn">(65 лв)</span></p>
-                        <ul class="product-preview-features">
-                            <li>Active Noise Cancellation</li>
-                            <li>Съвместимост с iOS и Android</li>
-                            <li>6+ часа батерия</li>
-                        </ul>
-                        <span class="preview-cta">Виж повече →</span>
-                    </div>
-                </a>
+            <div class="products-preview-grid" id="productsPreviewGrid">
+                <!-- Продуктите се зареждат динамично от products.json -->
             </div>
         </div>
     </section>
 
     <!-- Reviews Section -->
-    <section class="reviews-section">
+    <section class="reviews-section" id="reviewsSection">
         <div class="container">
             <h2 class="section-title">⭐ Какво казват клиентите ⭐</h2>
-            <div class="reviews-grid">
-
-                <div class="review-card review-text-card">
-                    <div class="review-stars">⭐⭐⭐⭐⭐</div>
-                    <p class="review-text">"Страхотни слушалки! Звукът е кристално чист и шумопотискането работи перфектно. Доставката беше светкавична. Препоръчвам!"</p>
-                    <p class="review-author">— Мартин К., София</p>
-                    <p class="review-source">Econt доставка ✓</p>
-                </div>
-
-                <div class="review-card review-text-card">
-                    <div class="review-stars">⭐⭐⭐⭐⭐</div>
-                    <p class="review-text">"Поръчах за подарък и останах приятно изненадан от качеството. Прегледахги на място при куриера и ги взех без колебание!"</p>
-                    <p class="review-author">— Виктория П., Пловдив</p>
-                    <p class="review-source">Econt доставка ✓</p>
-                </div>
-
-                <div class="review-card review-text-card">
-                    <div class="review-stars">⭐⭐⭐⭐⭐</div>
-                    <p class="review-text">"Използвам ги вече 2 седмици всеки ден. Батерията трае страхотно и връзката с телефона е моментална. Много доволен!"</p>
-                    <p class="review-author">— Георги С., Варна</p>
-                    <p class="review-source">Econt доставка ✓</p>
-                </div>
-
-                <div class="review-card review-text-card">
-                    <div class="review-stars">⭐⭐⭐⭐⭐</div>
-                    <p class="review-text">"Бърза доставка, качествен продукт и отлично обслужване. Ще поръчам отново за приятел!"</p>
-                    <p class="review-author">— Симона Д., Бургас</p>
-                    <p class="review-source">Econt доставка ✓</p>
-                </div>
-
+            <div class="reviews-grid" id="reviewsGrid">
+                <!-- Ревютата се зареждат динамично от products.json / Google Apps Script -->
             </div>
         </div>
     </section>
@@ -170,7 +104,9 @@
         <div class="container">
             <h2>Свържи се с нас</h2>
             <p>Имаш въпроси? Обади се или изпрати съобщение.</p>
-            <a href="tel:0876127997" class="phone-link">📞 0876 127 997</a>
+            <div id="contactDynamic">
+                <!-- Телефон или контактна форма - зарежда се динамично от products.json -->
+            </div>
         </div>
     </section>
 
