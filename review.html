@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Остави ревю — ZenAirpods</title>
+<link rel="stylesheet" href="style.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+.review-wrap{min-height:70vh;display:flex;align-items:center;justify-content:center;padding:4rem 24px;}
+.review-box{background:#111;border:1px solid var(--border);border-radius:var(--radius);padding:2.5rem;max-width:480px;width:100%;}
+.form-eyebrow{font-size:0.62rem;letter-spacing:0.25em;text-transform:uppercase;color:var(--accent);margin-bottom:0.8rem;}
+.form-title{font-family:'DM Serif Display',serif;font-size:1.8rem;font-weight:400;color:var(--primary);margin-bottom:0.5rem;}
+.form-subtitle{font-size:0.85rem;color:var(--text-light);margin-bottom:2rem;line-height:1.6;}
+.form-group{margin-bottom:1.2rem;}
+.form-group label{display:block;font-size:0.7rem;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-light);margin-bottom:0.5rem;}
+.form-group input,.form-group textarea{width:100%;padding:10px 12px;background:#1a1a1a;border:1px solid var(--border);color:var(--primary);font-family:'Inter',sans-serif;font-size:0.9rem;border-radius:8px;outline:none;}
+.form-group textarea{min-height:120px;resize:vertical;}
+.stars-row{display:flex;gap:0.5rem;margin-bottom:1.2rem;}
+.star{font-size:2rem;cursor:pointer;color:var(--border);transition:color 0.15s;}
+.star.active{color:#e8b84d;}
+.btn-primary-full{width:100%;padding:14px;background:var(--accent);color:#fff;border:none;font-size:0.8rem;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;border-radius:8px;font-family:'Inter',sans-serif;font-weight:500;transition:var(--transition);}
+.btn-primary-full:hover{opacity:0.9;}
+.btn-primary-full:disabled{opacity:0.5;cursor:not-allowed;}
+.error-box{background:rgba(224,82,82,0.1);border:1px solid rgba(224,82,82,0.3);border-left:3px solid #e05252;padding:1rem;border-radius:8px;font-size:0.85rem;margin-bottom:1.5rem;text-align:left;}
+.success-box{text-align:center;padding:1rem 0;}
+.success-icon{font-size:2.8rem;margin-bottom:1rem;}
+.success-title{font-family:'DM Serif Display',serif;font-size:1.6rem;font-weight:400;color:var(--success);margin-bottom:0.6rem;}
+.success-text{font-size:0.88rem;color:var(--text-light);line-height:1.7;}
+.loading-box{text-align:center;padding:2rem 0;color:var(--text-light);font-size:0.85rem;}
+</style>
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="container">
+    <a href="index.html" class="logo">ZenAirpods</a>
+    <ul class="nav-links">
+      <li><a href="index.html">Начало</a></li>
+      <li><a href="products.html">Продукти</a></li>
+      <li><a href="index.html#contact">Контакти</a></li>
+    </ul>
+  </div>
+</nav>
+
+<div class="review-wrap">
+  <div class="review-box">
+    <div id="errorBox" class="error-box" style="display:none;"></div>
+
+    <div id="loadingContent" class="loading-box">Зареждане...</div>
+
+    <div id="manualEntryContent" style="display:none;">
+      <div class="form-eyebrow">Клиентско мнение</div>
+      <h1 class="form-title">Имаш код за ревю?</h1>
+      <p class="form-subtitle">Постави кода, който получи в имейла за покана за ревю.</p>
+      <div class="form-group">
+        <label>Код за ревю</label>
+        <input type="text" id="manualCodeInput" placeholder="код от имейла" />
+      </div>
+      <button class="btn-primary-full" id="manualCheckBtn" onclick="checkManualCode()">Продължи</button>
+    </div>
+
+    <div id="formContent" style="display:none;">
+      <div class="form-eyebrow">Клиентско мнение</div>
+      <h1 class="form-title">Остави ревю</h1>
+      <p class="form-subtitle" id="formSubtitle">Благодарим ти за поръчката от ZenAirpods! Споделете вашето мнение.</p>
+      <div class="stars-row" id="starsRow">
+        <span class="star active" data-val="1">★</span>
+        <span class="star active" data-val="2">★</span>
+        <span class="star active" data-val="3">★</span>
+        <span class="star active" data-val="4">★</span>
+        <span class="star active" data-val="5">★</span>
+      </div>
+      <div class="form-group">
+        <label>Вашето мнение *</label>
+        <textarea id="reviewText" placeholder="Разкажете ни за вашия опит с продукта и доставката..."></textarea>
+      </div>
+      <div class="form-group">
+        <label>Вашето име</label>
+        <input type="text" id="reviewName" placeholder="Мартин К." />
+      </div>
+      <button class="btn-primary-full" id="submitBtn" onclick="submitReview()">Изпрати ревюто</button>
+    </div>
+
+    <div id="successContent" class="success-box" style="display:none;">
+      <div class="success-icon">⭐</div>
+      <div class="success-title">Благодарим ти!</div>
+      <div class="success-text">Твоето ревю беше изпратено успешно.<br><br>Ще се радваме да ни посетиш отново!</div>
+    </div>
+  </div>
+</div>
+
+<footer class="footer">
+  <div class="container">
+    <p>&copy; 2026 ZenAirpods. Всички права запазени.</p>
+  </div>
+</footer>
+
+<script>
+let SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzKj9ttuvCMJFF3DJuPBry15BuiLkWzLku2NwDDbtZS7oZ5jgHtQp1jl2d9bertHYYn/exec';
+
+async function loadScriptUrl() {
+  try {
+    // Относителен път - зарежда products.json от същото repo/сайт, откъдето е
+    // самата страница. Няма нужда да се хардкодва repo името тук.
+    const r = await fetch('products.json?t=' + Date.now());
+    const d = await r.json();
+    if (d.settings && d.settings.scriptUrlEncoded) {
+      SCRIPT_URL = atob(d.settings.scriptUrlEncoded);
+    }
+  } catch(e) {
+    console.log('loadScriptUrl грешка (ползва се фиксирания SCRIPT_URL):', e);
+  }
+}
+
+const params = new URLSearchParams(window.location.search);
+let token = params.get('token');
+let orderId = params.get('order');
+
+let rating = 5;
+
+document.querySelectorAll('.star').forEach(function(star) {
+  star.addEventListener('click', function() {
+    rating = parseInt(this.dataset.val);
+    document.querySelectorAll('.star').forEach(function(s) {
+      s.classList.toggle('active', parseInt(s.dataset.val) <= rating);
+    });
+  });
+});
+
+const scriptUrlReady = loadScriptUrl();
+
+function showLoading() {
+  document.getElementById('loadingContent').style.display = 'block';
+  document.getElementById('manualEntryContent').style.display = 'none';
+  document.getElementById('formContent').style.display = 'none';
+}
+
+async function verifyAndShowForm(tok, ord) {
+  showLoading();
+  document.getElementById('loadingContent').textContent = 'Проверка на кода...';
+  await scriptUrlReady;
+  try {
+    let url = SCRIPT_URL + '?action=verifyReviewToken&token=' + encodeURIComponent(tok);
+    if (ord) url += '&order=' + encodeURIComponent(ord);
+    const res = await fetch(url);
+    const result = await res.json();
+    if (result && result.valid) {
+      token = tok;
+      orderId = result.orderId || ord;
+      document.getElementById('loadingContent').style.display = 'none';
+      document.getElementById('manualEntryContent').style.display = 'none';
+      document.getElementById('formContent').style.display = 'block';
+    } else {
+      document.getElementById('loadingContent').style.display = 'none';
+      showError((result && result.message) ? result.message : 'Невалиден или изтекъл код.');
+    }
+  } catch(e) {
+    document.getElementById('loadingContent').style.display = 'none';
+    showError('Възникна грешка при връзката със сървъра. Моля опитайте отново.');
+  }
+}
+
+function checkManualCode() {
+  const val = document.getElementById('manualCodeInput').value.trim();
+  if (!val) { showError('Моля въведи кода за ревю от имейла.'); return; }
+  hideError();
+  verifyAndShowForm(val, null);
+}
+
+async function init() {
+  if (token) {
+    await verifyAndShowForm(token, orderId);
+  } else {
+    document.getElementById('loadingContent').style.display = 'none';
+    document.getElementById('manualEntryContent').style.display = 'block';
+  }
+}
+
+async function submitReview() {
+  const text = document.getElementById('reviewText').value.trim();
+  const name = document.getElementById('reviewName').value.trim();
+  if (!text) { showError('Моля напишете вашето мнение.'); return; }
+  if (!token || !orderId) { showError('Невалиден код. Моля опитай отново.'); return; }
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true; btn.textContent = 'Изпращане...';
+  hideError();
+
+  await scriptUrlReady;
+
+  try {
+    const res = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        action: 'submitReview',
+        token: token, orderId: orderId,
+        rating: rating, text: text, name: name
+      })
+    });
+
+    const result = await res.json();
+
+    if (result && result.success) {
+      document.getElementById('formContent').style.display = 'none';
+      document.getElementById('successContent').style.display = 'block';
+    } else {
+      showError((result && result.message) ? result.message : 'Нещо се обърка. Моля опитайте отново.');
+      btn.disabled = false; btn.textContent = 'Изпрати ревюто';
+    }
+  } catch(e) {
+    showError('Възникна грешка при връзката със сървъра. Моля опитайте отново.');
+    btn.disabled = false; btn.textContent = 'Изпрати ревюто';
+  }
+}
+
+function showError(msg) {
+  const box = document.getElementById('errorBox');
+  box.textContent = msg; box.style.display = 'block';
+}
+function hideError() {
+  document.getElementById('errorBox').style.display = 'none';
+}
+
+init();
+</script>
+</body>
+</html>
