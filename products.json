@@ -5,7 +5,7 @@
       "name": "AirPods Pro 3 ANC",
       "price": 35.79,
       "priceBgn": 70,
-      "comparePrice": 70,
+      "comparePrice": 0,
       "comparePriceBgn": 0,
       "imageMain": "airpodspro3main.jpg",
       "imagePrefix": "pro3",
@@ -48,7 +48,7 @@
       "name": "AirPods Gen 4 ANC",
       "price": 33.23,
       "priceBgn": 65,
-      "comparePrice": 70,
+      "comparePrice": 0,
       "comparePriceBgn": 0,
       "imageMain": "airpods4genmain.jpg",
       "imagePrefix": "4gen",
@@ -95,7 +95,9 @@
     "phone": "0876 127 997",
     "hours": "Всеки ден",
     "showManualReviews": true,
-    "showClientReviews": true,
+    "showClientReviews": false,
+    "rewardDiscountChance": 0,
+    "rewardDiscountPercent": 10,
     "manualReviews": [
       {
         "text": "Страхотни слушалки! Звукът е кристално чист и шумопотискането работи перфектно. Доставката беше светкавична. Препоръчвам!",
