@@ -95,9 +95,10 @@
     "phone": "0876 127 997",
     "hours": "Всеки ден",
     "showManualReviews": true,
-    "showClientReviews": true,
+    "showClientReviews": false,
     "rewardDiscountChance": 0,
-    "rewardDiscountPercent": 5,
+    "rewardDiscountPercent": 10,
+    "clientReviews": [],
     "manualReviews": [
       {
         "text": "Страхотни слушалки! Звукът е кристално чист и шумопотискането работи перфектно. Доставката беше светкавична. Препоръчвам!",
