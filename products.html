@@ -46,16 +46,116 @@
         <div class="container">
             <h1 class="page-title">Нашите продукти</h1>
             
-            <div class="products-grid" id="productsGrid">
-                <!-- Продуктите се зареждат динамично от products.json -->
+            <div class="products-grid">
+                <!-- Product 1: AirPods Pro 3 -->
+                <div class="product-card" id="pro3">
+                    <div class="product-image-section">
+                        <div class="product-image-main" id="mainImage-pro3">
+                            <!-- Main image will be loaded by JavaScript -->
+                        </div>
+                        <div class="product-thumbnails" id="thumbnails-pro3">
+                            <!-- Thumbnails will be loaded by JavaScript -->
+                        </div>
+                    </div>
+                    
+                    <div class="product-info">
+                        <h2 class="product-title">AirPods Pro 3 ANC</h2>
+                        <p class="product-price">€35.79 <span class="price-bgn">(70 лв)</span></p>
+                        
+                        <div class="product-features">
+                            <h3>Основни характеристики:</h3>
+                            <ul>
+                                <li><strong>Active Noise Cancellation (ANC)</strong> – ефективно шумопотискане</li>
+                                <li>Разпознават се автоматично от <strong>Apple устройства</strong></li>
+                                <li>Поддържат <strong>Find My</strong> и <strong>Hey Siri</strong></li>
+                                <li>Пълна съвместимост с <strong>iOS и Android</strong></li>
+                                <li>Автоматично свързване и стабилна <strong>Bluetooth</strong> връзка</li>
+                                <li>Отлично качество на звука и плътен бас</li>
+                            </ul>
+                            
+                            <h3>Батерия:</h3>
+                            <ul>
+                                <li>Над <strong>6 часа</strong> работа с едно зареждане</li>
+                                <li>Зареждащият кейс осигурява до <strong>4 допълнителни зареждания</strong></li>
+                            </ul>
+                            
+                            <h3>Допълнителна информация:</h3>
+                            <ul>
+                                <li>Най-високият клас слушалки на Apple от най-новото поколение</li>
+                                <li>Подходящи за <strong>разговори, музика и спорт</strong></li>
+                            </ul>
+                        </div>
+
+                        <div class="product-actions">
+                            <div class="quantity-selector">
+                                <button class="qty-btn minus" data-product="pro3">-</button>
+                                <input type="number" class="qty-input" id="qty-pro3" value="1" min="1" max="99">
+                                <button class="qty-btn plus" data-product="pro3">+</button>
+                            </div>
+                            <button class="add-to-cart-btn" data-product="pro3" data-name="AirPods Pro 3 ANC" data-price="35.79">
+                                Добави в количка
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Product 2: AirPods Gen 4 -->
+                <div class="product-card" id="gen4">
+                    <div class="product-image-section">
+                        <div class="product-image-main" id="mainImage-gen4">
+                            <!-- Main image will be loaded by JavaScript -->
+                        </div>
+                        <div class="product-thumbnails" id="thumbnails-gen4">
+                            <!-- Thumbnails will be loaded by JavaScript -->
+                        </div>
+                    </div>
+                    
+                    <div class="product-info">
+                        <h2 class="product-title">AirPods Gen 4 ANC</h2>
+                        <p class="product-price">€33.23 <span class="price-bgn">(65 лв)</span></p>
+                        
+                        <div class="product-features">
+                            <h3>Основни характеристики:</h3>
+                            <ul>
+                                <li><strong>Active Noise Cancellation (ANC)</strong> – ефективно шумопотискане</li>
+                                <li>Разпознават се автоматично от <strong>Apple устройства</strong></li>
+                                <li>Поддържат <strong>Find My</strong> и <strong>Hey Siri</strong></li>
+                                <li>Пълна съвместимост с <strong>iOS и Android</strong></li>
+                                <li>Автоматично свързване и стабилна <strong>Bluetooth</strong> връзка</li>
+                                <li>Отлично качество на звука и плътен бас</li>
+                            </ul>
+                            
+                            <h3>Батерия:</h3>
+                            <ul>
+                                <li>Над <strong>6 часа</strong> работа с едно зареждане</li>
+                                <li>Зареждащият кейс осигурява до <strong>4 допълнителни зареждания</strong></li>
+                            </ul>
+                            
+                            <h3>Допълнителна информация:</h3>
+                            <ul>
+                                <li>Най-новото поколение слушалки на Apple</li>
+                                <li>Подходящи за <strong>разговори, музика и спорт</strong></li>
+                            </ul>
+                        </div>
+
+                        <div class="product-actions">
+                            <div class="quantity-selector">
+                                <button class="qty-btn minus" data-product="gen4">-</button>
+                                <input type="number" class="qty-input" id="qty-gen4" value="1" min="1" max="99">
+                                <button class="qty-btn plus" data-product="gen4">+</button>
+                            </div>
+                            <button class="add-to-cart-btn" data-product="gen4" data-name="AirPods Gen 4 ANC" data-price="33.23">
+                                Добави в количка
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="contact-cta">
                 <h2>Имаш въпроси?</h2>
                 <p>Свържи се с нас за повече информация</p>
-                <div id="contactCtaDynamic">
-                    <!-- Телефон или контактна форма - зарежда се динамично от products.json -->
-                </div>
+                <a href="tel:0876127997" class="phone-link">📞 0876 127 997</a>
             </div>
         </div>
     </section>
