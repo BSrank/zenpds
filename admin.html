@@ -302,6 +302,13 @@
       headers: { 'Authorization': 'token ' + GITHUB_TOKEN, 'Accept': 'application/vnd.github.v3+json' }
     });
     var data = await res.json();
+    // ВАЖНО: проверяваме res.ok и данни от GitHub, вместо сляпо да предполагаме
+    // успех - при невалиден/недостатъчен token GitHub връща JSON с "message"
+    // (напр. "Bad credentials" или "Not Found"), а не продуктов файл. Без тази
+    // проверка грешката минаваше тихо и панелът просто изглеждаше празен.
+    if (!res.ok || !data.content) {
+      throw new Error('GitHub: ' + (data.message || ('HTTP ' + res.status)) + ' (repo: ' + GITHUB_REPO + ')');
+    }
     fileSha = data.sha;
     var raw = data.content.replace(/\n/g,'');
     var content = JSON.parse(decodeURIComponent(escape(atob(raw))));
@@ -315,6 +322,9 @@
           headers: { 'Authorization': 'token ' + GITHUB_TOKEN, 'Accept': 'application/vnd.github.v3+json' }
         });
         var getData = await getRes.json();
+        if (!getRes.ok || !getData.sha) {
+          return { ok: false, message: 'GitHub (четене на SHA): ' + (getData.message || ('HTTP ' + getRes.status)) };
+        }
         fileSha = getData.sha;
 
         var content = btoa(unescape(encodeURIComponent(JSON.stringify({ products: products, settings: siteSettings }, null, 2))));
@@ -325,11 +335,17 @@
           body: JSON.stringify(body)
         });
         var data = await res.json();
+        if (!res.ok) {
+          // Най-честата причина тук: token-ът няма права за запис в repo-то
+          // (класически PAT без "repo" scope, или fine-grained PAT без
+          // "Contents: Read and write" за точно това repo).
+          return { ok: false, message: 'GitHub (запис): ' + (data.message || ('HTTP ' + res.status)) };
+        }
         if (data.content) fileSha = data.content.sha;
-        return res.ok;
+        return { ok: true };
       } catch (e) {
         console.error(e);
-        return false;
+        return { ok: false, message: e.message || String(e) };
       }
     });
   }
@@ -342,7 +358,7 @@
       renderProductsList();
       renderSettingsUI();
     } catch (e) {
-      toast('Грешка при зареждане на products.json', 'error');
+      toast('Грешка при зареждане: ' + e.message, 'error');
       console.error(e);
     }
   }
@@ -360,8 +376,8 @@
     var phoneInput = document.getElementById('settings-phone');
     if (phoneInput) siteSettings.phone = phoneInput.value.trim();
 
-    var ok = await saveProductsToGitHub();
-    toast(ok ? 'Запазено успешно!' : 'Грешка при запазване', ok ? 'success' : 'error');
+    var result = await saveProductsToGitHub();
+    toast(result.ok ? 'Запазено успешно!' : ('Грешка: ' + result.message), result.ok ? 'success' : 'error');
   }
 
   // ─── PRODUCTS TAB ───
@@ -573,7 +589,9 @@
     el.textContent = msg;
     el.className = 'toast show ' + (type || '');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function() { el.classList.remove('show'); }, 3000);
+    // Грешките остават по-дълго на екрана, защото GitHub съобщенията понякога
+    // са по-дълги и трябва да имаш време да ги прочетеш/копираш.
+    toastTimer = setTimeout(function() { el.classList.remove('show'); }, type === 'error' ? 7000 : 3000);
   }
 </script>
 </body>
