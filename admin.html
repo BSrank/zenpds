@@ -215,6 +215,35 @@
         <div id="manualReviewsList"></div>
         <button class="btn btn-ghost" onclick="addManualReview()">+ Добави ревю</button>
       </div>
+
+      <div class="card">
+        <h3 style="font-family:'DM Serif Display',serif;font-weight:400;font-size:1.1rem;margin-bottom:1rem;">Награда след одобрено ревю</h3>
+        <p style="font-size:0.75rem;color:var(--muted);margin-bottom:1.2rem;">
+          Всеки клиент, оставил ревю, получава уникален еднократен промокод по имейл — но едва след като одобриш ревюто му (таб "Ревюта"). Тук решаваш какъв процент от тях да получат промокод за отстъпка вместо безплатен силиконов кейс.
+        </p>
+
+        <div style="margin-bottom:1.4rem;">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.4rem;">
+            <label class="product-row-label">Колко клиенти да получават промокод за отстъпка (вместо кейс)?</label>
+            <span id="reward-chance-display" style="font-family:'DM Serif Display',serif;font-size:1.2rem;color:var(--accent);">0%</span>
+          </div>
+          <input type="range" id="settings-reward-chance" min="0" max="100" step="5" value="0" style="width:100%;accent-color:var(--accent);" oninput="onRewardSliderChange()" />
+          <div style="display:flex;justify-content:space-between;font-size:0.65rem;color:var(--muted);margin-top:2px;">
+            <span>0% — винаги кейс</span>
+            <span>100% — винаги промокод</span>
+          </div>
+        </div>
+
+        <div style="margin-bottom:1rem;">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:0.4rem;">
+            <label class="product-row-label">Ако е промокод — с колко отстъпка?</label>
+            <span id="reward-percent-display" style="font-family:'DM Serif Display',serif;font-size:1.2rem;color:var(--accent);">10%</span>
+          </div>
+          <input type="range" id="settings-reward-percent" min="5" max="50" step="5" value="10" style="width:100%;accent-color:var(--accent);" oninput="onRewardSliderChange()" />
+        </div>
+
+        <div id="reward-summary-box" style="background:var(--surface2,#1a1a1a);border:1px dashed var(--border);border-radius:8px;padding:0.9rem 1rem;font-size:0.78rem;color:var(--text);line-height:1.6;"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -392,9 +421,35 @@
     }
     var phoneInput = document.getElementById('settings-phone');
     if (phoneInput) siteSettings.phone = phoneInput.value.trim();
+    var chanceInput = document.getElementById('settings-reward-chance');
+    var percentInput = document.getElementById('settings-reward-percent');
+    if (chanceInput) siteSettings.rewardDiscountChance = parseInt(chanceInput.value, 10) || 0;
+    if (percentInput) siteSettings.rewardDiscountPercent = parseInt(percentInput.value, 10) || 0;
 
     var result = await saveProductsToGitHub();
     toast(result.ok ? 'Запазено успешно!' : ('Грешка: ' + result.message), result.ok ? 'success' : 'error');
+  }
+
+  function onRewardSliderChange() {
+    var chanceEl = document.getElementById('settings-reward-chance');
+    var percentEl = document.getElementById('settings-reward-percent');
+    if (!chanceEl || !percentEl) return;
+    var chance = parseInt(chanceEl.value, 10) || 0;
+    var percent = parseInt(percentEl.value, 10) || 0;
+    var chanceDisplay = document.getElementById('reward-chance-display');
+    var percentDisplay = document.getElementById('reward-percent-display');
+    if (chanceDisplay) chanceDisplay.textContent = chance + '%';
+    if (percentDisplay) percentDisplay.textContent = percent + '%';
+    var summary = document.getElementById('reward-summary-box');
+    if (summary) {
+      if (chance === 0) {
+        summary.innerHTML = '📦 В момента <strong>всички</strong> клиенти, оставили ревю, получават код за <strong>безплатен силиконов кейс</strong>.';
+      } else if (chance === 100) {
+        summary.innerHTML = '💸 В момента <strong>всички</strong> клиенти, оставили ревю, получават <strong>промокод за -' + percent + '% отстъпка</strong>.';
+      } else {
+        summary.innerHTML = '🎲 От всеки 100 клиенти, оставили ревю: <strong>' + chance + '</strong> ще получат <strong>промокод за -' + percent + '% отстъпка</strong>, а останалите <strong>' + (100 - chance) + '</strong> — код за <strong>безплатен силиконов кейс</strong>.';
+      }
+    }
   }
 
   // ─── PRODUCTS TAB ───
@@ -426,6 +481,11 @@
     document.getElementById('toggle-manualreviews').classList.toggle('on', siteSettings.showManualReviews === true);
     document.getElementById('toggle-clientreviews').classList.toggle('on', siteSettings.showClientReviews === true);
     renderManualReviewsList();
+    var chanceEl = document.getElementById('settings-reward-chance');
+    var percentEl = document.getElementById('settings-reward-percent');
+    if (chanceEl) chanceEl.value = (siteSettings.rewardDiscountChance !== undefined && siteSettings.rewardDiscountChance !== null) ? siteSettings.rewardDiscountChance : 0;
+    if (percentEl) percentEl.value = (siteSettings.rewardDiscountPercent !== undefined && siteSettings.rewardDiscountPercent !== null) ? siteSettings.rewardDiscountPercent : 10;
+    onRewardSliderChange();
   }
 
   function toggleContactMode() {
@@ -603,7 +663,14 @@
       });
       const result = await res.json();
       if (result && result.success) {
-        toast('Ревюто е одобрено!', 'success');
+        if (result.reward && result.reward.code) {
+          var rewardLabel = result.reward.type === 'discount'
+            ? ('промокод -' + result.reward.value + '% (' + result.reward.code + ')')
+            : ('кейс код (' + result.reward.code + ')');
+          toast('Ревюто е одобрено! Наградата (' + rewardLabel + ') е изпратена по имейл.', 'success');
+        } else {
+          toast('Ревюто е одобрено!', 'success');
+        }
         loadReviewsAdmin();
       } else {
         toast('Грешка при одобрение', 'error');
