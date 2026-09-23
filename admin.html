@@ -274,6 +274,10 @@
     GITHUB_REPO = sessionStorage.getItem('zen_repo') || GITHUB_REPO;
     document.getElementById('loginScreen').style.display = 'none';
     document.getElementById('adminPanel').style.display = 'block';
+    // ВАЖНО: при рефреш (автоматично влизане чрез запазената сесия) трябва
+    // изрично да заредим продуктите - иначе панелът се показва празен и БЕЗ
+    // никаква мрежова заявка, защото нищо не го е задействало.
+    loadData();
   }
 
   // ─── TABS ───
