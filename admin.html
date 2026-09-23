@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin — ZenAirpods</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0a; --surface: #111111; --surface2: #1a1a1a;
+      --border: #2a2a2a; --text: #f0ece4; --muted: #888;
+      --accent: #2563eb; --accent2: #4f83f1;
+      --danger: #e05252; --success: #52c07a; --info: #5299e0;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-weight: 300; min-height: 100vh; }
+    .login-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+    .login-box { background: var(--surface); border: 1px solid var(--border); padding: 3rem 2.5rem; width: min(380px, 90vw); border-radius: 12px; text-align: center; }
+    .login-box h1 { font-family: 'DM Serif Display', serif; font-size: 2rem; font-weight: 400; margin-bottom: 0.3rem; }
+    .login-box h1 span { color: var(--accent); }
+    .login-box p { font-size: 0.8rem; color: var(--muted); margin-bottom: 2rem; }
+    .login-box input { width: 100%; padding: 12px; background: var(--surface2); border: 1px solid var(--border); color: var(--text); font-family: 'Inter', sans-serif; font-size: 1rem; border-radius: 8px; outline: none; margin-bottom: 1rem; text-align: center; letter-spacing: 0.05em; }
+    .login-box input:focus { border-color: var(--accent); }
+    .login-btn { width: 100%; padding: 13px; background: var(--accent); color: #fff; border: none; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 0.85rem; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 500; border-radius: 8px; }
+    .login-error { color: var(--danger); font-size: 0.8rem; margin-top: 0.8rem; display: none; }
+    .admin-panel { display: none; }
+    nav { display: flex; align-items: center; justify-content: space-between; padding: 16px 4%; background: var(--surface); border-bottom: 1px solid var(--border); }
+    .nav-logo { font-family: 'DM Serif Display', serif; font-size: 1.4rem; color: var(--text); }
+    .nav-logo span { color: var(--accent); }
+    .logout-btn { background: none; border: 1px solid var(--border); color: var(--muted); padding: 7px 16px; cursor: pointer; font-size: 0.78rem; border-radius: 6px; font-family: 'Inter', sans-serif; text-transform: uppercase; transition: border-color 0.2s, color 0.2s; }
+    .logout-btn:hover { border-color: var(--danger); color: var(--danger); }
+    .admin-content { padding: 2rem 4%; max-width: 1100px; margin: 0 auto; }
+    .tabs { display: flex; border-bottom: 1px solid var(--border); margin-bottom: 1.5rem; flex-wrap: wrap; }
+    .tab { padding: 10px 20px; background: none; border: none; color: var(--muted); cursor: pointer; font-family: 'Inter', sans-serif; font-size: 0.85rem; letter-spacing: 0.05em; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.2s; }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .toolbar { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin-bottom: 1.5rem; }
+    .toolbar-title { font-family: 'DM Serif Display', serif; font-size: 1.6rem; font-weight: 400; margin-right: auto; }
+    .btn { padding: 9px 20px; border-radius: 8px; cursor: pointer; font-family: 'Inter', sans-serif; font-size: 0.8rem; letter-spacing: 0.04em; border: 1px solid var(--border); transition: all 0.2s; background: none; color: var(--text); }
+    .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent2); }
+    .btn-ghost { background: none; color: var(--muted); }
+    .btn-ghost:hover { border-color: var(--text); color: var(--text); }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.3rem 1.5rem; margin-bottom: 1.2rem; }
+    .product-row { display: grid; grid-template-columns: 1.6fr 0.8fr 0.8fr 0.8fr auto; gap: 1rem; align-items: center; padding: 0.9rem 0; border-bottom: 1px solid var(--border); }
+    .product-row:last-child { border-bottom: none; }
+    .product-row-label { font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+    .product-name-cell { font-size: 0.95rem; font-weight: 500; }
+    input[type=text], input[type=number], input[type=email], textarea, select {
+      width: 100%; padding: 8px 10px; background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text); font-family: 'Inter', sans-serif; font-size: 0.85rem; border-radius: 6px; outline: none;
+    }
+    textarea { resize: vertical; min-height: 60px; }
+    .toggle-switch { position: relative; width: 38px; height: 21px; background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; transition: background 0.25s, border-color 0.25s; flex-shrink: 0; cursor: pointer; display: inline-block; }
+    .toggle-switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 15px; height: 15px; background: var(--muted); border-radius: 50%; transition: transform 0.25s, background 0.25s; }
+    .toggle-switch.on { background: rgba(82,192,122,0.15); border-color: var(--success); }
+    .toggle-switch.on::after { transform: translateX(17px); background: var(--success); }
+    .toggle-row { display: flex; align-items: center; gap: 12px; padding: 0.7rem 0; }
+    .toggle-row-label { font-size: 0.85rem; }
+    .toggle-row-sub { font-size: 0.72rem; color: var(--muted); }
+    .orders-table, .reviews-table { width: 100%; border-collapse: collapse; }
+    .orders-table th, .reviews-table th { text-align: left; font-size: 0.65rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); padding: 0.6rem 0.6rem; border-bottom: 1px solid var(--border); }
+    .orders-table td, .reviews-table td { padding: 0.7rem 0.6rem; border-bottom: 1px solid var(--border); font-size: 0.8rem; vertical-align: top; }
+    .orders-table tr:hover td, .reviews-table tr:hover td { background: var(--surface2); }
+    .order-items-list { font-size: 0.72rem; color: var(--muted); margin-top: 3px; white-space: pre-line; }
+    .small-btn { padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 0.68rem; letter-spacing: 0.04em; font-family: 'Inter', sans-serif; background: none; border: 1px solid var(--border); color: var(--muted); transition: all 0.2s; white-space: nowrap; }
+    .small-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .small-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+    .manual-review-item { border: 1px solid var(--border); border-radius: 8px; padding: 1rem; margin-bottom: 0.8rem; background: var(--surface2); }
+    .manual-review-item .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.6rem; }
+    .toast { position: fixed; bottom: 30px; right: 30px; background: var(--surface); border: 1px solid var(--border); padding: 12px 20px; border-radius: 8px; font-size: 0.85rem; z-index: 999; transform: translateY(20px); opacity: 0; transition: all 0.3s; pointer-events: none; }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { border-color: var(--success); color: var(--success); }
+    .toast.error { border-color: var(--danger); color: var(--danger); }
+    .badge { font-size: 0.62rem; letter-spacing: 0.08em; padding: 2px 8px; border-radius: 10px; text-transform: uppercase; }
+    .badge.on { background: rgba(82,192,122,0.15); color: var(--success); }
+    .badge.off { background: rgba(224,82,82,0.1); color: var(--danger); }
+    .empty-note { color: var(--muted); font-size: 0.85rem; padding: 1.5rem 0; text-align: center; }
+    .loading-note { color: var(--muted); font-size: 0.85rem; padding: 1rem 0; }
+    @media (max-width: 700px) {
+      .product-row { grid-template-columns: 1fr 1fr; }
+      .manual-review-item .fields { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div class="login-screen" id="loginScreen">
+  <div class="login-box">
+    <h1>Zen<span>Airpods</span></h1>
+    <p>Административен панел</p>
+    <input type="password" id="passwordInput" placeholder="Парола" onkeydown="if(event.key==='Enter')login();" />
+    <input type="text" id="tokenInput" placeholder="GitHub Personal Access Token (ghp_...)" onkeydown="if(event.key==='Enter')login();" />
+    <input type="text" id="repoInput" placeholder="GitHub repo (owner/repo)" value="BSrank/zenpds" onkeydown="if(event.key==='Enter')login();" />
+    <button class="login-btn" onclick="login()">Влез</button>
+    <p class="login-error" id="loginError"></p>
+  </div>
+</div>
+
+<!-- ADMIN PANEL -->
+<div class="admin-panel" id="adminPanel">
+  <nav>
+    <div class="nav-logo">Zen<span>Airpods</span> · Admin</div>
+    <button class="logout-btn" onclick="logout()">Изход</button>
+  </nav>
+
+  <div class="admin-content">
+    <div class="tabs">
+      <button class="tab active" data-tab="products" onclick="switchTab('products')">Продукти</button>
+      <button class="tab" data-tab="orders" onclick="switchTab('orders')">Поръчки</button>
+      <button class="tab" data-tab="reviews" onclick="switchTab('reviews')">Ревюта</button>
+      <button class="tab" data-tab="settings" onclick="switchTab('settings')">Настройки</button>
+    </div>
+
+    <!-- ═══ ПРОДУКТИ ═══ -->
+    <div class="tab-panel active" id="tab-products">
+      <div class="toolbar">
+        <div class="toolbar-title">Продукти</div>
+        <button class="btn btn-primary" onclick="saveProducts()">💾 Запази промените</button>
+      </div>
+      <div class="card">
+        <div class="product-row" style="border-bottom:1px solid var(--border);padding-bottom:0.6rem;">
+          <div class="product-row-label">Продукт</div>
+          <div class="product-row-label">Цена (€)</div>
+          <div class="product-row-label">"Оригинална" цена (€)</div>
+          <div class="product-row-label">Активен</div>
+          <div></div>
+        </div>
+        <div id="productsList"></div>
+      </div>
+      <p style="font-size:0.75rem;color:var(--muted);margin-top:0.5rem;">
+        💡 "Оригинална" цена е по-висока зачертана цена до истинската, за да изглежда продуктът намален/на промоция.
+        Остави я на 0, за да не се показва.
+      </p>
+    </div>
+
+    <!-- ═══ ПОРЪЧКИ ═══ -->
+    <div class="tab-panel" id="tab-orders">
+      <div class="toolbar">
+        <div class="toolbar-title">Поръчки</div>
+        <button class="btn btn-ghost" onclick="ordersLoaded=false;loadOrders();">↻ Обнови</button>
+      </div>
+      <p class="loading-note" id="ordersLoading">Зареждане...</p>
+      <div class="card" style="overflow-x:auto;display:none;" id="ordersTableWrap">
+        <table class="orders-table">
+          <thead><tr>
+            <th>Дата</th><th>Клиент</th><th>Имейл</th><th>Телефон</th><th>Доставка</th><th>Продукти</th><th>Сума</th><th>Статус</th><th>Ревю</th>
+          </tr></thead>
+          <tbody id="ordersBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ═══ РЕВЮТА ═══ -->
+    <div class="tab-panel" id="tab-reviews">
+      <div class="toolbar">
+        <div class="toolbar-title">Клиентски ревюта</div>
+        <button class="btn btn-ghost" onclick="loadReviewsAdmin();">↻ Обнови</button>
+      </div>
+      <p class="loading-note" id="reviewsAdminLoading">Зареждане...</p>
+      <div id="reviewsAdminList"></div>
+    </div>
+
+    <!-- ═══ НАСТРОЙКИ ═══ -->
+    <div class="tab-panel" id="tab-settings">
+      <div class="toolbar">
+        <div class="toolbar-title">Настройки</div>
+        <button class="btn btn-primary" onclick="saveProducts()">💾 Запази настройките</button>
+      </div>
+
+      <div class="card">
+        <h3 style="font-family:'DM Serif Display',serif;font-weight:400;font-size:1.1rem;margin-bottom:1rem;">Домейн на сайта</h3>
+        <label class="product-row-label" style="display:block;margin-bottom:6px;">Публичен адрес (домейн)</label>
+        <input type="text" id="settings-sitedomain" placeholder="https://zenairpods.store/" />
+        <p style="font-size:0.75rem;color:var(--muted);margin-top:0.5rem;">Използва се в имейли (напр. поканата за ревю), вместо адреса на GitHub Pages.</p>
+      </div>
+
+      <div class="card">
+        <h3 style="font-family:'DM Serif Display',serif;font-weight:400;font-size:1.1rem;margin-bottom:1rem;">Контакти</h3>
+        <div class="toggle-row">
+          <div class="toggle-switch" id="toggle-contactmode" onclick="toggleContactMode()"></div>
+          <div>
+            <div class="toggle-row-label" id="contactModeLabel">Телефон</div>
+            <div class="toggle-row-sub">Изключено = показва телефонен номер · Включено = показва контактна форма (имейлът не се вижда в кода на сайта)</div>
+          </div>
+        </div>
+        <div style="margin-top:0.8rem;">
+          <label class="product-row-label" style="display:block;margin-bottom:6px;">Телефонен номер</label>
+          <input type="text" id="settings-phone" placeholder="0876 127 997" />
+        </div>
+      </div>
+
+      <div class="card">
+        <h3 style="font-family:'DM Serif Display',serif;font-weight:400;font-size:1.1rem;margin-bottom:1rem;">Ревюта</h3>
+        <div class="toggle-row">
+          <div class="toggle-switch" id="toggle-manualreviews" onclick="toggleSetting('showManualReviews','toggle-manualreviews')"></div>
+          <div>
+            <div class="toggle-row-label">Фиксирани ревюта</div>
+            <div class="toggle-row-sub">Показва предварително написаните ревюта по-долу</div>
+          </div>
+        </div>
+        <div class="toggle-row">
+          <div class="toggle-switch" id="toggle-clientreviews" onclick="toggleSetting('showClientReviews','toggle-clientreviews')"></div>
+          <div>
+            <div class="toggle-row-label">Реални ревюта от клиенти</div>
+            <div class="toggle-row-sub">Показва одобрените ревюта, оставени от клиенти (виж таб "Ревюта")</div>
+          </div>
+        </div>
+
+        <h4 style="margin-top:1.2rem;margin-bottom:0.8rem;font-size:0.85rem;color:var(--muted);">Фиксирани ревюта</h4>
+        <div id="manualReviewsList"></div>
+        <button class="btn btn-ghost" onclick="addManualReview()">+ Добави ревю</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ─── CONFIG ───
+  var GITHUB_REPO = sessionStorage.getItem('zen_repo') || 'BSrank/zenpds';
+  const PRODUCTS_FILE = 'products.json';
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzKj9ttuvCMJFF3DJuPBry15BuiLkWzLku2NwDDbtZS7oZ5jgHtQp1jl2d9bertHYYn/exec';
+  // SHA-256 хеш на паролата - самата парола никъде не стои в чист текст в кода.
+  // (Ако искаш да я смениш, изчисли нов SHA-256 хеш на новата парола и го сложи тук.)
+  const PW_HASH = '830ec5c1efee9ed79fee45e2a1da3ebb881d97167febdb1b71a35a20229b9956';
+
+  var GITHUB_TOKEN = sessionStorage.getItem('zen_token') || '';
+
+  var repoInputEl = document.getElementById('repoInput');
+  if (repoInputEl && GITHUB_REPO) repoInputEl.value = GITHUB_REPO;
+
+  // ─── AUTH ───
+  async function hashPassword(pw) {
+    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pw));
+    return Array.from(new Uint8Array(buf)).map(function(b) { return b.toString(16).padStart(2,'0'); }).join('');
+  }
+
+  async function login() {
+    var pw = document.getElementById('passwordInput').value;
+    var token = document.getElementById('tokenInput').value.trim();
+    var repo = document.getElementById('repoInput').value.trim();
+    var btn = document.querySelector('.login-btn');
+    btn.textContent = 'Проверка...'; btn.disabled = true;
+    var hash = await hashPassword(pw);
+    var repoValid = /^[^\/\s]+\/[^\/\s]+$/.test(repo);
+    if (hash === PW_HASH && token.startsWith('ghp_') && repoValid) {
+      sessionStorage.setItem('zen_session', '1');
+      sessionStorage.setItem('zen_token', token);
+      sessionStorage.setItem('zen_repo', repo);
+      GITHUB_TOKEN = token;
+      GITHUB_REPO = repo;
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('adminPanel').style.display = 'block';
+      document.getElementById('loginError').style.display = 'none';
+      loadData();
+    } else {
+      document.getElementById('loginError').textContent = !repoValid ? 'Въведи repo във формат owner/repo (напр. BSrank/zenpds).' : (!token.startsWith('ghp_') ? 'Невалиден GitHub Token.' : 'Грешна парола.');
+      document.getElementById('loginError').style.display = 'block';
+      document.getElementById('passwordInput').value = '';
+    }
+    btn.textContent = 'Влез'; btn.disabled = false;
+  }
+
+  function logout() { sessionStorage.removeItem('zen_session'); sessionStorage.removeItem('zen_token'); sessionStorage.removeItem('zen_repo'); location.reload(); }
+
+  if (sessionStorage.getItem('zen_session') && sessionStorage.getItem('zen_token')) {
+    GITHUB_TOKEN = sessionStorage.getItem('zen_token');
+    GITHUB_REPO = sessionStorage.getItem('zen_repo') || GITHUB_REPO;
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('adminPanel').style.display = 'block';
+  }
+
+  // ─── TABS ───
+  function switchTab(name) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
+    if (name === 'orders') loadOrders();
+    if (name === 'reviews') loadReviewsAdmin();
+  }
+
+  // ─── GITHUB SAVE QUEUE ───
+  // Гарантира, че записите в products.json вървят СТРИКТНО един след друг,
+  // всеки взима свеж SHA едва след като предишният е приключил (иначе GitHub
+  // отхвърля втория запис с 409 Conflict заради стар SHA).
+  var ghSaveQueue = Promise.resolve();
+  function queueGitHubSave(taskFn) {
+    var run = ghSaveQueue.then(taskFn, taskFn);
+    ghSaveQueue = run.catch(function() {});
+    return run;
+  }
+
+  var products = [];
+  var siteSettings = {};
+  var fileSha = null;
+
+  async function loadProductsFromGitHub() {
+    var res = await fetch('https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + PRODUCTS_FILE, {
+      headers: { 'Authorization': 'token ' + GITHUB_TOKEN, 'Accept': 'application/vnd.github.v3+json' }
+    });
+    var data = await res.json();
+    fileSha = data.sha;
+    var raw = data.content.replace(/\n/g,'');
+    var content = JSON.parse(decodeURIComponent(escape(atob(raw))));
+    return content;
+  }
+
+  async function saveProductsToGitHub() {
+    return queueGitHubSave(async function() {
+      try {
+        var getRes = await fetch('https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + PRODUCTS_FILE, {
+          headers: { 'Authorization': 'token ' + GITHUB_TOKEN, 'Accept': 'application/vnd.github.v3+json' }
+        });
+        var getData = await getRes.json();
+        fileSha = getData.sha;
+
+        var content = btoa(unescape(encodeURIComponent(JSON.stringify({ products: products, settings: siteSettings }, null, 2))));
+        var body = { message: 'Update products.json via admin', content: content, sha: fileSha };
+        var res = await fetch('https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + PRODUCTS_FILE, {
+          method: 'PUT',
+          headers: { 'Authorization': 'token ' + GITHUB_TOKEN, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        var data = await res.json();
+        if (data.content) fileSha = data.content.sha;
+        return res.ok;
+      } catch (e) {
+        console.error(e);
+        return false;
+      }
+    });
+  }
+
+  async function loadData() {
+    try {
+      var content = await loadProductsFromGitHub();
+      products = content.products || [];
+      siteSettings = content.settings || {};
+      renderProductsList();
+      renderSettingsUI();
+    } catch (e) {
+      toast('Грешка при зареждане на products.json', 'error');
+      console.error(e);
+    }
+  }
+
+  async function saveProducts() {
+    // Вземаме стойностите от Настройки формата преди запис (за случай, че сме
+    // на таб "Настройки" при натискане на бутона).
+    var domainInput = document.getElementById('settings-sitedomain');
+    if (domainInput) {
+      var val = domainInput.value.trim();
+      if (val && !/^https?:\/\//.test(val)) val = 'https://' + val;
+      if (val && !val.endsWith('/')) val += '/';
+      siteSettings.siteDomain = val;
+    }
+    var phoneInput = document.getElementById('settings-phone');
+    if (phoneInput) siteSettings.phone = phoneInput.value.trim();
+
+    var ok = await saveProductsToGitHub();
+    toast(ok ? 'Запазено успешно!' : 'Грешка при запазване', ok ? 'success' : 'error');
+  }
+
+  // ─── PRODUCTS TAB ───
+  function renderProductsList() {
+    var list = document.getElementById('productsList');
+    list.innerHTML = products.map(function(p, idx) {
+      return '<div class="product-row">' +
+        '<div class="product-name-cell">' + p.name + '</div>' +
+        '<input type="number" step="0.01" value="' + p.price + '" onchange="products[' + idx + '].price = parseFloat(this.value)||0;" />' +
+        '<input type="number" step="0.01" value="' + (p.comparePrice || 0) + '" onchange="products[' + idx + '].comparePrice = parseFloat(this.value)||0;" />' +
+        '<div class="toggle-switch ' + (p.active !== false ? 'on' : '') + '" onclick="toggleProductActive(' + idx + ', this)"></div>' +
+        '<span class="badge ' + (p.active !== false ? 'on' : 'off') + '">' + (p.active !== false ? 'активен' : 'скрит') + '</span>' +
+      '</div>';
+    }).join('');
+  }
+
+  function toggleProductActive(idx, el) {
+    products[idx].active = products[idx].active === false ? true : false;
+    el.classList.toggle('on', products[idx].active !== false);
+    renderProductsList();
+  }
+
+  // ─── SETTINGS TAB ───
+  function renderSettingsUI() {
+    document.getElementById('settings-sitedomain').value = siteSettings.siteDomain || '';
+    document.getElementById('settings-phone').value = siteSettings.phone || '';
+    document.getElementById('toggle-contactmode').classList.toggle('on', siteSettings.contactMode === 'form');
+    document.getElementById('contactModeLabel').textContent = siteSettings.contactMode === 'form' ? 'Контактна форма' : 'Телефон';
+    document.getElementById('toggle-manualreviews').classList.toggle('on', siteSettings.showManualReviews === true);
+    document.getElementById('toggle-clientreviews').classList.toggle('on', siteSettings.showClientReviews === true);
+    renderManualReviewsList();
+  }
+
+  function toggleContactMode() {
+    siteSettings.contactMode = siteSettings.contactMode === 'form' ? 'phone' : 'form';
+    document.getElementById('toggle-contactmode').classList.toggle('on', siteSettings.contactMode === 'form');
+    document.getElementById('contactModeLabel').textContent = siteSettings.contactMode === 'form' ? 'Контактна форма' : 'Телефон';
+  }
+
+  function toggleSetting(key, elId) {
+    siteSettings[key] = !siteSettings[key];
+    document.getElementById(elId).classList.toggle('on', siteSettings[key] === true);
+  }
+
+  function renderManualReviewsList() {
+    var list = document.getElementById('manualReviewsList');
+    var reviews = siteSettings.manualReviews || [];
+    if (!reviews.length) {
+      list.innerHTML = '<p class="empty-note">Няма добавени фиксирани ревюта.</p>';
+      return;
+    }
+    list.innerHTML = reviews.map(function(r, idx) {
+      return '<div class="manual-review-item">' +
+        '<div class="fields">' +
+          '<div><label class="product-row-label" style="display:block;margin-bottom:4px;">Автор</label><input type="text" value="' + (r.author||'').replace(/"/g,'&quot;') + '" onchange="siteSettings.manualReviews[' + idx + '].author = this.value;" /></div>' +
+          '<div><label class="product-row-label" style="display:block;margin-bottom:4px;">Куриер</label><input type="text" value="' + (r.courier||'') + '" onchange="siteSettings.manualReviews[' + idx + '].courier = this.value;" /></div>' +
+        '</div>' +
+        '<label class="product-row-label" style="display:block;margin-bottom:4px;">Текст на ревюто</label>' +
+        '<textarea onchange="siteSettings.manualReviews[' + idx + '].text = this.value;">' + (r.text||'') + '</textarea>' +
+        '<div style="margin-top:0.6rem;"><button class="small-btn danger" onclick="removeManualReview(' + idx + ')">Изтрий</button></div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function addManualReview() {
+    if (!siteSettings.manualReviews) siteSettings.manualReviews = [];
+    siteSettings.manualReviews.push({ text: '', author: '', courier: 'Econt' });
+    renderManualReviewsList();
+  }
+
+  function removeManualReview(idx) {
+    siteSettings.manualReviews.splice(idx, 1);
+    renderManualReviewsList();
+  }
+
+  // ─── ORDERS TAB ───
+  var ordersLoaded = false;
+  function loadOrders() {
+    if (ordersLoaded) return;
+    document.getElementById('ordersLoading').style.display = 'block';
+    document.getElementById('ordersTableWrap').style.display = 'none';
+    fetch(SCRIPT_URL + '?action=getOrders')
+      .then(function(r) { return r.json(); })
+      .then(function(data) { renderOrders(data.orders || []); ordersLoaded = true; })
+      .catch(function() { document.getElementById('ordersLoading').textContent = 'Грешка при зареждане.'; });
+  }
+
+  function renderOrders(orders) {
+    document.getElementById('ordersLoading').style.display = 'none';
+    document.getElementById('ordersTableWrap').style.display = 'block';
+    var body = document.getElementById('ordersBody');
+    if (!orders.length) {
+      body.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:2rem;">Няма поръчки</td></tr>';
+      return;
+    }
+    body.innerHTML = orders.slice().reverse().map(function(o) {
+      var orderId = o.id || (o.date + o.phone);
+      var reviewCell = '';
+      if (o.reviewLeft) {
+        reviewCell = '<span style="color:var(--success);font-size:0.72rem;">✓ Оставил ревю</span>';
+      } else if (o.email) {
+        var invited = o.reviewInvited;
+        reviewCell = '<button id="invite-btn-' + orderId + '" class="small-btn" style="' + (invited ? 'border-color:var(--success);color:var(--success);' : '') + '" onclick="sendReviewInvite(\'' + orderId + '\',\'' + o.email + '\',\'' + (o.name||'').replace(/'/g,"\\'") + '\')">' + (invited ? '✓ Поканен' : '✉ Покани') + '</button>';
+      } else {
+        reviewCell = '<span style="color:var(--muted);font-size:0.68rem;">Няма мейл</span>';
+      }
+      return '<tr>' +
+        '<td>' + (o.date||'—') + '<br><small style="color:var(--muted)">' + (o.time||'') + '</small></td>' +
+        '<td>' + (o.name||'—') + '</td>' +
+        '<td style="font-size:0.75rem;">' + (o.email||'—') + '</td>' +
+        '<td>' + (o.phone||'—') + '</td>' +
+        '<td>' + (o.courier||'—') + '<br><small style="color:var(--muted)">' + (o.city||'') + ' · ' + (o.office||'') + '</small></td>' +
+        '<td><div class="order-items-list">' + (o.products||'') + '</div></td>' +
+        '<td style="color:var(--accent)">' + (o.totalEur||'—') + '<br><small>' + (o.totalBgn||'') + '</small></td>' +
+        '<td>' + (o.status||'Нова') + '</td>' +
+        '<td>' + reviewCell + '</td>' +
+      '</tr>';
+    }).join('');
+  }
+
+  async function sendReviewInvite(orderId, clientEmail, clientName) {
+    if (!clientEmail) { toast('Клиентът няма имейл', 'error'); return; }
+    if (!confirm('Изпрати покана за ревю на ' + clientName + ' (' + clientEmail + ')?')) return;
+    // Ако е зададен домейн в Настройки → използваме него (истинския сайт).
+    const siteUrl = siteSettings.siteDomain || 'https://zenairpods.store/';
+    fetch(SCRIPT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        action: 'sendReviewInvite',
+        orderId: orderId,
+        email: clientEmail,
+        name: clientName,
+        siteUrl: siteUrl
+      })
+    });
+    var btn = document.getElementById('invite-btn-' + orderId);
+    if (btn) { btn.textContent = '✓ Поканен'; btn.style.borderColor = 'var(--success)'; btn.style.color = 'var(--success)'; }
+    toast('Поканата е изпратена на ' + clientEmail, 'success');
+  }
+
+  // ─── REVIEWS TAB ───
+  async function loadReviewsAdmin() {
+    document.getElementById('reviewsAdminLoading').style.display = 'block';
+    try {
+      var res = await fetch(SCRIPT_URL + '?action=getReviews');
+      var data = await res.json();
+      renderReviewsAdmin(data.reviews || []);
+    } catch(e) {
+      document.getElementById('reviewsAdminLoading').textContent = 'Грешка при зареждане.';
+    }
+  }
+
+  function renderReviewsAdmin(reviews) {
+    var list = document.getElementById('reviewsAdminList');
+    document.getElementById('reviewsAdminLoading').style.display = 'none';
+    if (!reviews.length) {
+      list.innerHTML = '<p class="empty-note">Няма ревюта все още.</p>';
+      return;
+    }
+    list.innerHTML = reviews.map(function(r) {
+      return '<div class="card" style="display:grid;grid-template-columns:1fr auto;gap:1rem;align-items:start;">' +
+        '<div>' +
+          '<div style="color:#e8b84d;font-size:0.9rem;margin-bottom:0.3rem;">★★★★★</div>' +
+          '<div style="font-size:0.85rem;color:var(--muted);font-style:italic;margin-bottom:0.5rem;">"' + (r.text||'') + '"</div>' +
+          '<div style="font-size:0.78rem;color:var(--text);font-weight:500;">— ' + (r.name||'') + '</div>' +
+          (r.date ? '<div style="font-size:0.68rem;color:var(--muted);">' + r.date + '</div>' : '') +
+          '<div style="margin-top:0.5rem;"><span class="badge ' + (r.approved ? 'on' : 'off') + '">' + (r.approved ? '✓ Одобрено' : '⏳ Чака одобрение') + '</span></div>' +
+        '</div>' +
+        '<div style="display:flex;flex-direction:column;gap:0.5rem;">' +
+          (!r.approved ? '<button class="small-btn" onclick="approveReview(\'' + r.id + '\')">Одобри</button>' : '') +
+          '<button class="small-btn danger" onclick="deleteReview(\'' + r.id + '\')">Изтрий</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  async function approveReview(id) {
+    try {
+      const res = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'approveReview', id: id })
+      });
+      const result = await res.json();
+      if (result && result.success) {
+        toast('Ревюто е одобрено!', 'success');
+        loadReviewsAdmin();
+      } else {
+        toast('Грешка при одобрение', 'error');
+      }
+    } catch(e) { toast('Грешка', 'error'); }
+  }
+
+  async function deleteReview(id) {
+    if (!confirm('Изтрий ревюто?')) return;
+    try {
+      await fetch(SCRIPT_URL, { method:'POST', mode:'no-cors', headers:{'Content-Type':'application/json'}, body: JSON.stringify({action:'deleteReview', id:id}) });
+      toast('Ревюто е изтрито!', 'success');
+      loadReviewsAdmin();
+    } catch(e) { toast('Грешка', 'error'); }
+  }
+
+  // ─── TOAST ───
+  var toastTimer = null;
+  function toast(msg, type) {
+    var el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = 'toast show ' + (type || '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function() { el.classList.remove('show'); }, 3000);
+  }
+</script>
+</body>
+</html>
