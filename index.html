@@ -228,6 +228,11 @@
                 <div class="order-summary">
                     <h3>Поръчка:</h3>
                     <div id="orderSummary"></div>
+                    <div id="promoRow" style="display:flex;gap:0.5rem;margin:0.8rem 0;">
+                        <input type="text" id="promoCodeInput" placeholder="Промокод (ако имаш)" style="flex:1;padding:9px 11px;background:#1a1a1a;border:1px solid var(--border);color:var(--text);font-family:inherit;font-size:0.85rem;border-radius:8px;outline:none;text-transform:uppercase;" />
+                        <button type="button" onclick="applyPromoCode()" id="promoApplyBtn" style="padding:9px 16px;background:none;border:1px solid var(--accent);color:var(--accent);cursor:pointer;font-size:0.8rem;border-radius:8px;white-space:nowrap;">Приложи</button>
+                    </div>
+                    <div id="promoStatus" style="font-size:0.8rem;margin-bottom:0.6rem;display:none;"></div>
                     <div class="summary-total">
                         <strong>Общо:</strong>
                         <strong id="checkoutTotal">€0.00</strong>
