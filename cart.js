@@ -5,17 +5,219 @@ const GOOGLE_SHEETS_CONFIG = {
     webAppUrl: 'https://script.google.com/macros/s/AKfycbzKj9ttuvCMJFF3DJuPBry15BuiLkWzLku2NwDDbtZS7oZ5jgHtQp1jl2d9bertHYYn/exec' // Замени с URL от Google Apps Script Deploy
 };
 
-// ==================== PRODUCT IMAGE CONFIGURATION ====================
-const PRODUCT_IMAGES = {
-    'pro3': {
-        main: 'airpodspro3main.jpg',
-        prefix: 'pro3'
-    },
-    'gen4': {
-        main: 'airpods4genmain.jpg',
-        prefix: '4gen'
+// ==================== ПРОДУКТИ / НАСТРОЙКИ (от products.json) ====================
+// Продуктите, ревютата и контактният режим вече идват от products.json (управлява
+// се от admin.html), вместо да са хардкоднати в index.html / products.html.
+let SITE_PRODUCTS = [];
+let SITE_SETTINGS = {};
+let PRODUCT_IMAGES = {};
+
+async function loadSiteData() {
+    // До 3 опита - ако products.json временно не се зареди (напр. GitHub Pages
+    // CDN-ът все още не е "разпространил" наскоро добавен файл до всички сървъри),
+    // изчакваме малко и опитваме пак, вместо веднага да се предадем.
+    const MAX_ATTEMPTS = 3;
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        try {
+            const res = await fetch('products.json?t=' + Date.now());
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const data = await res.json();
+            const products = (data.products || []).filter(p => p.active !== false);
+            if (!products.length) throw new Error('products.json е празен');
+
+            SITE_PRODUCTS = products;
+            SITE_SETTINGS = data.settings || {};
+
+            // PRODUCT_IMAGES се строи динамично от products.json, вместо да е хардкоднато.
+            PRODUCT_IMAGES = {};
+            SITE_PRODUCTS.forEach(p => {
+                PRODUCT_IMAGES[p.id] = { main: p.imageMain, prefix: p.imagePrefix };
+            });
+            return; // успех
+        } catch (e) {
+            console.error('Грешка при зареждане на products.json (опит ' + attempt + '/' + MAX_ATTEMPTS + '):', e);
+            if (attempt < MAX_ATTEMPTS) {
+                await new Promise(r => setTimeout(r, 1200));
+            }
+        }
     }
-};
+    // И трите опита се провалиха - оставяме SITE_PRODUCTS празен. renderProductsGrid()
+    // и renderProductsPreview() НЕ пипат HTML-а в този случай (виж техния код по-долу),
+    // така че статичният fallback в самия HTML остава видим за посетителите.
+    SITE_PRODUCTS = [];
+    SITE_SETTINGS = {};
+}
+
+function findProduct(id) {
+    return SITE_PRODUCTS.find(p => p.id === id);
+}
+
+function formatPriceHTML(product) {
+    const hasDiscount = product.comparePrice && product.comparePrice > product.price;
+    const eur = '€' + Number(product.price).toFixed(2);
+    const bgn = product.priceBgn ? ' <span class="price-bgn">(' + product.priceBgn + ' лв)</span>' : '';
+    if (!hasDiscount) return eur + bgn;
+    const compareEur = '€' + Number(product.comparePrice).toFixed(2);
+    return '<span style="text-decoration:line-through;color:var(--text-light);font-size:0.85em;margin-right:8px;">' + compareEur + '</span>' + eur + bgn;
+}
+
+// ==================== DYNAMIC RENDERING (index.html / products.html) ====================
+function renderDynamicContent() {
+    renderProductsPreview();
+    renderProductsGrid();
+    renderReviewsSection();
+    renderContactSections();
+}
+
+// ---- Начало: preview grid ----
+function renderProductsPreview() {
+    const grid = document.getElementById('productsPreviewGrid');
+    if (!grid) return;
+    // ВАЖНО: ако products.json не се е заредил (мрежова грешка, или GitHub Pages
+    // все още не е "разпространил" файла до всички CDN сървъри - това се случва
+    // за кратко след добавяне на НОВ файл в repo-то), SITE_PRODUCTS ще е празен.
+    // В такъв случай НЕ пипаме грида изобщо - оставяме статичния fallback от
+    // HTML-а (виж index.html), вместо да го изтрием и страницата да "опустее".
+    if (!SITE_PRODUCTS.length) return;
+    grid.innerHTML = SITE_PRODUCTS.map(p => {
+        const featuresHTML = (p.previewFeatures || []).map(f => '<li>' + f + '</li>').join('');
+        return '<a href="products.html#' + p.id + '" class="product-preview-card">' +
+            '<div class="product-preview-image" id="previewImage-' + p.id + '">' +
+                '<div class="product-image-placeholder">' + p.name.replace(' ', '<br>') + '</div>' +
+            '</div>' +
+            '<div class="product-preview-info">' +
+                '<h3 class="product-preview-title">' + p.name + '</h3>' +
+                '<p class="product-preview-price">' + formatPriceHTML(p).replace('price-bgn', 'price-preview-bgn') + '</p>' +
+                '<ul class="product-preview-features">' + featuresHTML + '</ul>' +
+                '<span class="preview-cta">Виж повече →</span>' +
+            '</div>' +
+        '</a>';
+    }).join('');
+}
+
+// ---- Продукти: пълни карти ----
+function renderProductsGrid() {
+    const grid = document.getElementById('productsGrid');
+    if (!grid) return;
+    // Виж коментара в renderProductsPreview() по-горе - същата защита тук.
+    if (!SITE_PRODUCTS.length) return;
+    grid.innerHTML = SITE_PRODUCTS.map(p => {
+        const sectionsHTML = (p.sections || []).map(sec =>
+            '<h3>' + sec.title + '</h3><ul>' + (sec.items || []).map(it => '<li>' + it + '</li>').join('') + '</ul>'
+        ).join('');
+        return '<div class="product-card" id="' + p.id + '">' +
+            '<div class="product-image-section">' +
+                '<div class="product-image-main" id="mainImage-' + p.id + '"></div>' +
+                '<div class="product-thumbnails" id="thumbnails-' + p.id + '"></div>' +
+            '</div>' +
+            '<div class="product-info">' +
+                '<h2 class="product-title">' + p.name + '</h2>' +
+                '<p class="product-price">' + formatPriceHTML(p) + '</p>' +
+                '<div class="product-features">' + sectionsHTML + '</div>' +
+                '<div class="product-actions">' +
+                    '<div class="quantity-selector">' +
+                        '<button class="qty-btn minus" data-product="' + p.id + '">-</button>' +
+                        '<input type="number" class="qty-input" id="qty-' + p.id + '" value="1" min="1" max="99">' +
+                        '<button class="qty-btn plus" data-product="' + p.id + '">+</button>' +
+                    '</div>' +
+                    '<button class="add-to-cart-btn" data-product="' + p.id + '" data-name="' + p.name + '" data-price="' + p.price + '">' +
+                        'Добави в количка' +
+                    '</button>' +
+                '</div>' +
+            '</div>' +
+        '</div>';
+    }).join('');
+}
+
+// ---- Ревюта (index.html) ----
+function renderReviewsSection() {
+    const section = document.getElementById('reviewsSection');
+    const grid = document.getElementById('reviewsGrid');
+    if (!section || !grid) return;
+
+    const manualReviews = SITE_SETTINGS.showManualReviews ? (SITE_SETTINGS.manualReviews || []).filter(r => r && r.text) : [];
+    const showClient = SITE_SETTINGS.showClientReviews === true;
+
+    if (!manualReviews.length && !showClient) {
+        section.style.display = 'none';
+        return;
+    }
+    section.style.display = 'block';
+
+    grid.innerHTML = manualReviews.map(r =>
+        '<div class="review-card review-text-card">' +
+            '<div class="review-stars">⭐⭐⭐⭐⭐</div>' +
+            '<p class="review-text">"' + r.text + '"</p>' +
+            '<p class="review-author">— ' + (r.author || '') + '</p>' +
+            (r.courier ? '<p class="review-source">' + r.courier + ' доставка ✓</p>' : '') +
+        '</div>'
+    ).join('');
+
+    if (showClient) {
+        fetch(GOOGLE_SHEETS_CONFIG.webAppUrl + '?action=getReviews')
+            .then(r => r.json())
+            .then(data => {
+                const clientReviews = (data.reviews || []).filter(r => r.approved).slice(0, 6);
+                clientReviews.forEach(r => {
+                    const card = document.createElement('div');
+                    card.className = 'review-card review-text-card';
+                    card.innerHTML = '<div class="review-stars">⭐⭐⭐⭐⭐</div>' +
+                        '<p class="review-text">"' + (r.text || '') + '"</p>' +
+                        '<p class="review-author">— ' + (r.name || '') + '</p>' +
+                        (r.date ? '<p class="review-source">' + r.date + '</p>' : '');
+                    grid.appendChild(card);
+                });
+                if (!manualReviews.length && !clientReviews.length) section.style.display = 'none';
+            }).catch(() => {});
+    }
+}
+
+// ---- Контакт (index.html + products.html) ----
+function renderContactSections() {
+    renderContactBlock('contactDynamic');   // index.html секция за контакт
+    renderContactBlock('contactCtaDynamic'); // products.html contact-cta
+}
+
+function renderContactBlock(containerId) {
+    const el = document.getElementById(containerId);
+    if (!el) return;
+
+    if (SITE_SETTINGS.contactMode === 'form') {
+        el.innerHTML =
+            '<form id="siteContactForm" class="site-contact-form" style="max-width:420px;margin:0 auto;text-align:left;">' +
+                '<input type="text" id="cf-name" placeholder="Твоето име" style="width:100%;padding:10px 12px;margin-bottom:0.6rem;background:#1a1a1a;border:1px solid var(--border);color:var(--text);border-radius:8px;font-family:inherit;font-size:0.9rem;outline:none;" />' +
+                '<input type="email" id="cf-email" placeholder="Имейл за отговор" style="width:100%;padding:10px 12px;margin-bottom:0.6rem;background:#1a1a1a;border:1px solid var(--border);color:var(--text);border-radius:8px;font-family:inherit;font-size:0.9rem;outline:none;" />' +
+                '<textarea id="cf-msg" placeholder="Съобщение..." rows="4" style="width:100%;padding:10px 12px;margin-bottom:0.8rem;background:#1a1a1a;border:1px solid var(--border);color:var(--text);border-radius:8px;font-family:inherit;font-size:0.9rem;outline:none;resize:vertical;"></textarea>' +
+                '<button type="button" class="cta-btn" onclick="submitContactForm(\'' + containerId + '\')" style="cursor:pointer;">Изпрати</button>' +
+                '<p id="cf-status-' + containerId + '" style="margin-top:0.8rem;font-size:0.85rem;color:var(--success);display:none;">✓ Съобщението е изпратено!</p>' +
+            '</form>';
+    } else {
+        const phone = SITE_SETTINGS.phone || '0876 127 997';
+        el.innerHTML = '<a href="tel:' + phone.replace(/\s/g, '') + '" class="phone-link">📞 ' + phone + '</a>';
+    }
+}
+
+async function submitContactForm(containerId) {
+    const name = document.getElementById('cf-name').value.trim();
+    const email = document.getElementById('cf-email').value.trim();
+    const msg = document.getElementById('cf-msg').value.trim();
+    if (!name || !email || !msg) { alert('Моля попълни всички полета.'); return; }
+    try {
+        await fetch(GOOGLE_SHEETS_CONFIG.webAppUrl, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'contactForm', name, email, msg })
+        });
+    } catch (e) {
+        console.error('Грешка при изпращане на съобщението:', e);
+    }
+    const status = document.getElementById('cf-status-' + containerId);
+    if (status) status.style.display = 'block';
+    document.getElementById('cf-name').value = '';
+    document.getElementById('cf-email').value = '';
+    document.getElementById('cf-msg').value = '';
+}
 
 // ==================== CART FUNCTIONALITY ====================
 let cart = [];
@@ -23,12 +225,14 @@ let currentLightboxImages = [];
 let currentLightboxIndex = 0;
 
 // Load cart from localStorage on page load
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
     loadCart();
     updateCartUI();
+    await loadSiteData();
+    renderDynamicContent();
     setupEventListeners();
     loadProductImages();
-    loadPreviewImages(); // Load homepage preview images
+    loadPreviewImages();
 });
 
 // ==================== PRODUCT IMAGE LOADING ====================
@@ -44,7 +248,7 @@ async function loadImagesForProduct(productId) {
     const mainImageContainer = document.getElementById(`mainImage-${productId}`);
     const thumbnailsContainer = document.getElementById(`thumbnails-${productId}`);
 
-    if (!mainImageContainer || !thumbnailsContainer) return;
+    if (!config || !mainImageContainer || !thumbnailsContainer) return;
 
     // ВАЖНО: проверяваме основната снимка + номерираните снимки (1.jpg, 2.jpg, ...)
     // ПАРАЛЕЛНО с Promise.all, вместо последователно (едно по едно с await в цикъл).
@@ -80,9 +284,10 @@ async function loadImagesForProduct(productId) {
         displayProductImages(productId, images);
     } else {
         // Show placeholder if no images found
+        const product = findProduct(productId);
         mainImageContainer.innerHTML = `
             <div class="product-image-placeholder">
-                ${productId === 'pro3' ? 'AirPods<br>Pro 3' : 'AirPods<br>Gen 4'}
+                ${product ? product.name.replace(' ', '<br>') : ''}
             </div>
         `;
     }
@@ -100,22 +305,23 @@ function checkImageExists(imagePath) {
 function displayProductImages(productId, images) {
     const mainImageContainer = document.getElementById(`mainImage-${productId}`);
     const thumbnailsContainer = document.getElementById(`thumbnails-${productId}`);
-    
+    if (!mainImageContainer || !thumbnailsContainer) return;
+
     // Display main image
     mainImageContainer.innerHTML = `
         <img src="${images[0]}" alt="Product image" onclick="openLightbox('${productId}', 0)">
     `;
-    
+
     // Display thumbnails if more than one image
     if (images.length > 1) {
         thumbnailsContainer.innerHTML = images.map((img, index) => `
-            <div class="product-thumbnail ${index === 0 ? 'active' : ''}" 
+            <div class="product-thumbnail ${index === 0 ? 'active' : ''}"
                  onclick="changeMainImage('${productId}', ${index})">
                 <img src="${img}" alt="Thumbnail ${index + 1}">
             </div>
         `).join('');
     }
-    
+
     // Store images for lightbox
     window[`${productId}_images`] = images;
 }
@@ -123,12 +329,12 @@ function displayProductImages(productId, images) {
 function changeMainImage(productId, index) {
     const images = window[`${productId}_images`];
     const mainImageContainer = document.getElementById(`mainImage-${productId}`);
-    
+
     // Update main image
     mainImageContainer.innerHTML = `
         <img src="${images[index]}" alt="Product image" onclick="openLightbox('${productId}', ${index})">
     `;
-    
+
     // Update active thumbnail
     const thumbnails = document.querySelectorAll(`#thumbnails-${productId} .product-thumbnail`);
     thumbnails.forEach((thumb, i) => {
@@ -140,13 +346,13 @@ function changeMainImage(productId, index) {
 function openLightbox(productId, startIndex) {
     const images = window[`${productId}_images`];
     if (!images || images.length === 0) return;
-    
+
     currentLightboxImages = images;
     currentLightboxIndex = startIndex;
-    
+
     const lightbox = document.getElementById('lightbox');
     const lightboxImage = document.getElementById('lightboxImage');
-    
+
     if (lightbox && lightboxImage) {
         lightboxImage.src = images[startIndex];
         lightbox.classList.add('active');
@@ -164,7 +370,7 @@ function closeLightbox() {
 
 function lightboxPrev() {
     if (currentLightboxImages.length === 0) return;
-    
+
     currentLightboxIndex = (currentLightboxIndex - 1 + currentLightboxImages.length) % currentLightboxImages.length;
     const lightboxImage = document.getElementById('lightboxImage');
     if (lightboxImage) {
@@ -174,7 +380,7 @@ function lightboxPrev() {
 
 function lightboxNext() {
     if (currentLightboxImages.length === 0) return;
-    
+
     currentLightboxIndex = (currentLightboxIndex + 1) % currentLightboxImages.length;
     const lightboxImage = document.getElementById('lightboxImage');
     if (lightboxImage) {
@@ -212,29 +418,27 @@ function setupEventListeners() {
     const courierSelect = document.getElementById('courier');
     if (courierSelect) courierSelect.addEventListener('change', updateOfficeLabel);
 
-    // Add to cart buttons
-    const addToCartBtns = document.querySelectorAll('.add-to-cart-btn');
-    addToCartBtns.forEach(btn => {
-        btn.addEventListener('click', handleAddToCart);
+    // Add to cart buttons (динамично създадени - делегираме на document, за да
+    // работят и когато карите се пре-рендират след зареждане на products.json)
+    document.addEventListener('click', (e) => {
+        if (e.target.classList && e.target.classList.contains('add-to-cart-btn')) {
+            handleAddToCart(e);
+        }
+        if (e.target.classList && e.target.classList.contains('qty-btn')) {
+            handleQuantityChange(e);
+        }
     });
 
-    // Quantity buttons
-    const qtyBtns = document.querySelectorAll('.qty-btn');
-    qtyBtns.forEach(btn => {
-        btn.addEventListener('click', handleQuantityChange);
-    });
-
-    // Quantity inputs
-    const qtyInputs = document.querySelectorAll('.qty-input');
-    qtyInputs.forEach(input => {
-        input.addEventListener('change', (e) => {
+    // Quantity inputs (делегирано, тъй като полетата се създават динамично)
+    document.addEventListener('change', (e) => {
+        if (e.target.classList && e.target.classList.contains('qty-input')) {
             let value = parseInt(e.target.value);
             if (isNaN(value) || value < 1) {
                 e.target.value = 1;
             } else if (value > 99) {
                 e.target.value = 99;
             }
-        });
+        }
     });
 
     // Lightbox controls
@@ -252,7 +456,7 @@ function setupEventListeners() {
     document.addEventListener('keydown', (e) => {
         const lightbox = document.getElementById('lightbox');
         const isLightboxOpen = lightbox && lightbox.classList.contains('active');
-        
+
         if (e.key === 'Escape') {
             closeCartModal();
             closeCheckoutModal();
@@ -269,6 +473,7 @@ function handleQuantityChange(e) {
     const btn = e.target;
     const productId = btn.dataset.product;
     const input = document.getElementById(`qty-${productId}`);
+    if (!input) return;
     let currentValue = parseInt(input.value);
 
     if (btn.classList.contains('plus')) {
@@ -289,7 +494,7 @@ function handleAddToCart(e) {
     const productName = btn.dataset.name;
     const productPrice = parseFloat(btn.dataset.price);
     const qtyInput = document.getElementById(`qty-${productId}`);
-    const quantity = parseInt(qtyInput.value);
+    const quantity = qtyInput ? parseInt(qtyInput.value) : 1;
 
     const existingItem = cart.find(item => item.id === productId);
 
@@ -306,7 +511,7 @@ function handleAddToCart(e) {
 
     saveCart();
     updateCartUI();
-    
+
     // Visual feedback
     btn.textContent = '✓ Добавено!';
     btn.style.background = '#22c55e';
@@ -315,7 +520,7 @@ function handleAddToCart(e) {
         btn.style.background = '';
     }, 1500);
 
-    qtyInput.value = 1;
+    if (qtyInput) qtyInput.value = 1;
 }
 
 // ==================== CART UI ====================
@@ -349,11 +554,11 @@ function updateCartUI() {
                 </div>
             `;
         });
-        
+
         if (cartItems) {
             cartItems.innerHTML = itemsHTML;
         }
-        
+
         if (cartFooter) {
             cartFooter.style.display = 'block';
         }
@@ -390,7 +595,7 @@ function closeCartModal() {
 // ==================== CHECKOUT ====================
 function openCheckout() {
     closeCartModal();
-    
+
     const checkoutModal = document.getElementById('checkoutModal');
     const orderSummary = document.getElementById('orderSummary');
     const checkoutTotal = document.getElementById('checkoutTotal');
@@ -543,7 +748,7 @@ function showSuccessMessage() {
     const successMessage = document.getElementById('successMessage');
     if (successMessage) {
         successMessage.classList.add('active');
-        
+
         setTimeout(() => {
             successMessage.classList.remove('active');
         }, 4000);
@@ -564,21 +769,12 @@ function loadCart() {
 
 // ==================== LOAD PREVIEW IMAGES (Homepage) ====================
 async function loadPreviewImages() {
-    // Load AirPods Pro 3 preview
-    const pro3Preview = document.getElementById('previewImage-pro3');
-    if (pro3Preview) {
-        const pro3Exists = await checkImageExists('airpodspro3main.jpg');
-        if (pro3Exists) {
-            pro3Preview.innerHTML = '<img src="airpodspro3main.jpg" alt="AirPods Pro 3 ANC">';
-        }
-    }
-
-    // Load AirPods Gen 4 preview
-    const gen4Preview = document.getElementById('previewImage-gen4');
-    if (gen4Preview) {
-        const gen4Exists = await checkImageExists('airpods4genmain.jpg');
-        if (gen4Exists) {
-            gen4Preview.innerHTML = '<img src="airpods4genmain.jpg" alt="AirPods Gen 4 ANC">';
+    for (const p of SITE_PRODUCTS) {
+        const preview = document.getElementById(`previewImage-${p.id}`);
+        if (!preview || !p.imageMain) continue;
+        const exists = await checkImageExists(p.imageMain);
+        if (exists) {
+            preview.innerHTML = `<img src="${p.imageMain}" alt="${p.name}">`;
         }
     }
 }
