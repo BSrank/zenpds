@@ -148,7 +148,7 @@
       <div class="card" style="overflow-x:auto;display:none;" id="ordersTableWrap">
         <table class="orders-table">
           <thead><tr>
-            <th>Дата</th><th>Клиент</th><th style="color:var(--accent);">Покана за ревю</th><th>Имейл</th><th>Телефон</th><th>Доставка</th><th>Продукти</th><th>Сума</th><th>Статус</th>
+            <th>Дата</th><th>Клиент</th><th style="color:var(--accent);">Покана за ревю</th><th>Имейл</th><th>Телефон</th><th>Доставка</th><th>Продукти</th><th>Сума</th><th>Статус</th><th>Действия</th>
           </tr></thead>
           <tbody id="ordersBody"></tbody>
         </table>
@@ -568,7 +568,7 @@
     document.getElementById('ordersTableWrap').style.display = 'block';
     var body = document.getElementById('ordersBody');
     if (!orders.length) {
-      body.innerHTML = '<tr><td colspan="9" style="text-align:center;color:var(--muted);padding:2rem;">Няма поръчки</td></tr>';
+      body.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:2rem;">Няма поръчки</td></tr>';
       return;
     }
     body.innerHTML = orders.slice().reverse().map(function(o) {
@@ -582,6 +582,14 @@
       } else {
         reviewCell = '<span style="color:var(--muted);font-size:0.68rem;">Няма мейл</span>';
       }
+      var isCancelled = (o.status || 'Нова') === 'Отказана';
+      var actionsCell =
+        '<div style="display:flex;flex-direction:column;gap:0.4rem;">' +
+          (!isCancelled
+            ? '<button class="small-btn" style="border-color:var(--danger,#e05252);color:var(--danger,#e05252);" onclick="adminCancelOrder(\'' + orderId + '\',\'' + (o.name||'').replace(/'/g,"\\'") + '\')">Откажи</button>'
+            : '<span style="color:var(--danger,#e05252);font-size:0.72rem;">✕ Отказана</span>') +
+          '<button class="small-btn" style="border-color:var(--danger,#e05252);color:var(--danger,#e05252);" onclick="adminDeleteOrder(\'' + orderId + '\',\'' + (o.name||'').replace(/'/g,"\\'") + '\')">🗑 Изтрий</button>' +
+        '</div>';
       return '<tr>' +
         '<td>' + (o.date||'—') + '<br><small style="color:var(--muted)">' + (o.time||'') + '</small></td>' +
         '<td>' + (o.name||'—') + '</td>' +
@@ -591,9 +599,48 @@
         '<td>' + (o.courier||'—') + '<br><small style="color:var(--muted)">' + (o.city||'') + ' · ' + (o.office||'') + '</small></td>' +
         '<td><div class="order-items-list">' + (o.products||'') + '</div></td>' +
         '<td style="color:var(--accent)">' + (o.totalEur||'—') + '<br><small>' + (o.totalBgn||'') + '</small></td>' +
-        '<td>' + (o.status||'Нова') + '</td>' +
+        '<td' + (isCancelled ? ' style="color:var(--danger,#e05252);"' : '') + '>' + (o.status||'Нова') + '</td>' +
+        '<td>' + actionsCell + '</td>' +
       '</tr>';
     }).join('');
+  }
+
+  async function adminCancelOrder(orderId, clientName) {
+    if (!confirm('Сигурен ли си, че искаш да откажеш поръчката на ' + clientName + '? Клиентът ще получи имейл, че поръчката е отказана.')) return;
+    try {
+      const res = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'adminCancelOrder', orderId: orderId })
+      });
+      const result = await res.json();
+      if (result && result.ok) {
+        toast('Поръчката е отказана. Клиентът е уведомен по имейл.', 'success');
+        ordersLoaded = false;
+        loadOrders();
+      } else {
+        toast((result && result.message) ? result.message : 'Грешка при отказ на поръчката', 'error');
+      }
+    } catch (e) { toast('Грешка при връзка със сървъра', 'error'); }
+  }
+
+  async function adminDeleteOrder(orderId, clientName) {
+    if (!confirm('Сигурен ли си, че искаш ТРАЙНО да изтриеш поръчката на ' + clientName + '? Това не може да се отмени.')) return;
+    try {
+      const res = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'deleteOrder', orderId: orderId })
+      });
+      const result = await res.json();
+      if (result && result.ok) {
+        toast('Поръчката е изтрита.', 'success');
+        ordersLoaded = false;
+        loadOrders();
+      } else {
+        toast((result && result.message) ? result.message : 'Грешка при изтриване', 'error');
+      }
+    } catch (e) { toast('Грешка при връзка със сървъра', 'error'); }
   }
 
   async function sendReviewInvite(orderId, clientEmail, clientName) {
