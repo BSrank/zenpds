@@ -118,6 +118,7 @@
     <div class="tab-panel active" id="tab-products">
       <div class="toolbar">
         <div class="toolbar-title">Продукти</div>
+        <button class="btn btn-ghost" onclick="loadData()">↻ Презареди</button>
         <button class="btn btn-primary" onclick="saveProducts()">💾 Запази промените</button>
       </div>
       <div class="card">
@@ -352,15 +353,26 @@
   }
 
   async function loadData() {
-    try {
-      var content = await loadProductsFromGitHub();
-      products = content.products || [];
-      siteSettings = content.settings || {};
-      renderProductsList();
-      renderSettingsUI();
-    } catch (e) {
-      toast('Грешка при зареждане: ' + e.message, 'error');
-      console.error(e);
+    // До 3 опита - GitHub API понякога има кратък временен проблем (мрежа,
+    // rate limit за момент и т.н.). Без retry, един неуспешен опит правеше
+    // панела да изглежда все едно продуктите/настройките са изчезнали.
+    const MAX_ATTEMPTS = 3;
+    for (var attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        var content = await loadProductsFromGitHub();
+        products = content.products || [];
+        siteSettings = content.settings || {};
+        renderProductsList();
+        renderSettingsUI();
+        return; // успех
+      } catch (e) {
+        console.error('loadData опит ' + attempt + '/' + MAX_ATTEMPTS + ':', e);
+        if (attempt < MAX_ATTEMPTS) {
+          await new Promise(function(r) { setTimeout(r, 1200); });
+        } else {
+          toast('Грешка при зареждане: ' + e.message + ' — натисни "↻ Обнови" в таб Поръчки или презареди страницата.', 'error');
+        }
+      }
     }
   }
 
@@ -456,14 +468,35 @@
 
   // ─── ORDERS TAB ───
   var ordersLoaded = false;
-  function loadOrders() {
+  async function loadOrders() {
     if (ordersLoaded) return;
     document.getElementById('ordersLoading').style.display = 'block';
+    document.getElementById('ordersLoading').textContent = 'Зареждане...';
     document.getElementById('ordersTableWrap').style.display = 'none';
-    fetch(SCRIPT_URL + '?action=getOrders')
-      .then(function(r) { return r.json(); })
-      .then(function(data) { renderOrders(data.orders || []); ordersLoaded = true; })
-      .catch(function() { document.getElementById('ordersLoading').textContent = 'Грешка при зареждане.'; });
+
+    // До 3 опита - Apps Script "exec" винаги прави пренасочване (302) към
+    // googleusercontent.com, а първата заявка след пауза ("cold start") може
+    // да отнеме доста секунди или временно да се провали. Без retry, това
+    // изглеждаше все едно поръчките "изчезват".
+    const MAX_ATTEMPTS = 3;
+    for (var attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        var res = await fetch(SCRIPT_URL + '?action=getOrders');
+        var data = await res.json();
+        if (data.error) throw new Error(data.error);
+        renderOrders(data.orders || []);
+        ordersLoaded = true;
+        return; // успех
+      } catch (e) {
+        console.error('loadOrders опит ' + attempt + '/' + MAX_ATTEMPTS + ':', e);
+        if (attempt < MAX_ATTEMPTS) {
+          document.getElementById('ordersLoading').textContent = 'Зареждане... (опит ' + (attempt + 1) + ')';
+          await new Promise(function(r) { setTimeout(r, 1500); });
+        } else {
+          document.getElementById('ordersLoading').textContent = 'Грешка при зареждане: ' + e.message + ' — натисни "↻ Обнови".';
+        }
+      }
+    }
   }
 
   function renderOrders(orders) {
