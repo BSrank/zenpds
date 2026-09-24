@@ -584,11 +584,18 @@
         reviewCell = '<span style="color:var(--muted);font-size:0.68rem;">Няма мейл</span>';
       }
       var isCancelled = (o.status || 'Нова') === 'Отказана';
+      var isNoResponse = (o.status || 'Нова') === 'Без отговор';
+      var isClosed = isCancelled || isNoResponse;
       var actionsCell =
         '<div style="display:flex;flex-direction:column;gap:0.4rem;">' +
-          (!isCancelled
+          (!isClosed
             ? '<button class="small-btn" style="border-color:var(--danger,#e05252);color:var(--danger,#e05252);" onclick="adminCancelOrder(\'' + orderId + '\',\'' + (o.name||'').replace(/'/g,"\\'") + '\')">Откажи</button>'
-            : '<span style="color:var(--danger,#e05252);font-size:0.72rem;">✕ Отказана</span>') +
+            : '') +
+          (isCancelled ? '<span style="color:var(--danger,#e05252);font-size:0.72rem;">✕ Отказана</span>' : '') +
+          (isNoResponse ? '<span style="color:var(--muted);font-size:0.72rem;">☎ Без отговор</span>' : '') +
+          (!isClosed
+            ? '<button class="small-btn" style="border-color:var(--muted);color:var(--muted);" onclick="adminSilentCancelOrder(\'' + orderId + '\',\'' + (o.name||'').replace(/'/g,"\\'") + '\')" title="Само за теб - клиентът НЕ получава известие, имейлът му се трие">☎ Без отговор</button>'
+            : '') +
           '<button class="small-btn" style="border-color:var(--danger,#e05252);color:var(--danger,#e05252);" onclick="adminDeleteOrder(\'' + orderId + '\',\'' + (o.name||'').replace(/'/g,"\\'") + '\')">🗑 Изтрий</button>' +
         '</div>';
       return '<tr>' +
@@ -600,7 +607,7 @@
         '<td>' + (o.courier||'—') + '<br><small style="color:var(--muted)">' + (o.city||'') + ' · ' + (o.office||'') + '</small></td>' +
         '<td><div class="order-items-list">' + (o.products||'') + '</div></td>' +
         '<td style="color:var(--accent)">' + (o.totalEur||'—') + '<br><small>' + (o.totalBgn||'') + '</small></td>' +
-        '<td' + (isCancelled ? ' style="color:var(--danger,#e05252);"' : '') + '>' + (o.status||'Нова') + '</td>' +
+        '<td' + (isCancelled ? ' style="color:var(--danger,#e05252);"' : (isNoResponse ? ' style="color:var(--muted);"' : '')) + '>' + (o.status||'Нова') + '</td>' +
         '<td>' + actionsCell + '</td>' +
       '</tr>';
     }).join('');
@@ -621,6 +628,25 @@
         loadOrders();
       } else {
         toast((result && result.message) ? result.message : 'Грешка при отказ на поръчката', 'error');
+      }
+    } catch (e) { toast('Грешка при връзка със сървъра', 'error'); }
+  }
+
+  async function adminSilentCancelOrder(orderId, clientName) {
+    if (!confirm('Маркирай поръчката на ' + clientName + ' като "Без отговор"?\n\nТова е само за твоя информация - клиентът НЯМА да получи никакъв имейл, а имейлът му ще бъде изтрит от поръчката (за да не се трупа/кани повторно за ревю).')) return;
+    try {
+      const res = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'silentCancelOrder', orderId: orderId })
+      });
+      const result = await res.json();
+      if (result && result.ok) {
+        toast('Маркирано като "Без отговор". Клиентът не е известен.', 'success');
+        ordersLoaded = false;
+        loadOrders();
+      } else {
+        toast((result && result.message) ? result.message : 'Грешка', 'error');
       }
     } catch (e) { toast('Грешка при връзка със сървъра', 'error'); }
   }
