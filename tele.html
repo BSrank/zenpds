@@ -287,8 +287,8 @@
         document.getElementById('lockSub').textContent = 'Нямаш достъп до този панел.';
         return;
       }
-    } catch (e) {
-      document.getElementById('lockSub').textContent = 'Грешка при връзка със сървъра. Опитай отново по-късно.';
+  } catch (e) {
+      document.getElementById('lockSub').textContent = 'ДЕБЪГ: ' + (e && e.message ? e.message : String(e));
       return;
     }
     document.getElementById('lockScreen').style.display = 'none';
