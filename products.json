@@ -95,7 +95,7 @@
     "phone": "0876 127 997",
     "hours": "Всеки ден",
     "showManualReviews": true,
-    "showClientReviews": false,
+    "showClientReviews": true,
     "rewardDiscountChance": 0,
     "rewardDiscountPercent": 10,
     "clientReviews": [],
