@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+  <title>ZenAirpods · Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --bg: #0a0a0a; --surface: #111111; --surface2: #1a1a1a;
+      --border: #2a2a2a; --text: #f0ece4; --muted: #888;
+      --accent: #2563eb; --accent2: #4f83f1;
+      --danger: #e05252; --success: #52c07a;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-weight: 300; min-height: 100vh; padding-bottom: 2rem; }
+    nav { display:flex; align-items:center; justify-content:space-between; padding: 14px 16px; background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 5; }
+    .nav-logo { font-family: 'DM Serif Display', serif; font-size: 1.2rem; }
+    .nav-logo span { color: var(--accent); }
+    .tabs { display: flex; border-bottom: 1px solid var(--border); }
+    .tab { flex: 1; padding: 12px; background: none; border: none; color: var(--muted); cursor: pointer; font-family: 'Inter', sans-serif; font-size: 0.85rem; border-bottom: 2px solid transparent; }
+    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+    .tab-panel { display: none; padding: 14px; }
+    .tab-panel.active { display: block; }
+    .toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .toolbar-title { font-family: 'DM Serif Display', serif; font-size: 1.3rem; }
+    .btn-ghost { background: none; border: 1px solid var(--border); color: var(--muted); padding: 6px 14px; border-radius: 8px; font-size: 0.75rem; cursor: pointer; font-family: 'Inter', sans-serif; }
+    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; }
+    .order-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
+    .order-name { font-size: 0.95rem; font-weight: 500; }
+    .order-total { color: var(--accent); font-size: 0.9rem; font-weight: 500; }
+    .order-meta { font-size: 0.76rem; color: var(--muted); line-height: 1.6; margin-bottom: 8px; }
+    .order-items { font-size: 0.75rem; color: var(--muted); white-space: pre-line; margin-bottom: 10px; border-top: 1px solid var(--border); padding-top: 8px; }
+    .status-pill { display: inline-block; font-size: 0.62rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 9px; border-radius: 10px; }
+    .status-new { background: rgba(37,99,235,0.15); color: var(--accent2); }
+    .status-cancelled { background: rgba(224,82,82,0.15); color: var(--danger); }
+    .status-noresponse { background: rgba(136,136,136,0.15); color: var(--muted); }
+    .status-other { background: rgba(82,192,122,0.15); color: var(--success); }
+    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .small-btn { flex: 1; min-width: 90px; padding: 8px 10px; border-radius: 8px; cursor: pointer; font-size: 0.72rem; font-family: 'Inter', sans-serif; background: none; border: 1px solid var(--border); color: var(--muted); text-align: center; }
+    .small-btn.danger { border-color: var(--danger); color: var(--danger); }
+    .small-btn.accent { border-color: var(--accent); color: var(--accent); }
+    .small-btn.success { border-color: var(--success); color: var(--success); }
+    .review-stars { color: #e8b84d; font-size: 0.85rem; margin-bottom: 4px; }
+    .review-text { font-size: 0.85rem; font-style: italic; color: var(--text); margin-bottom: 6px; line-height: 1.5; }
+    .review-author { font-size: 0.78rem; color: var(--muted); margin-bottom: 10px; }
+    .empty-note { color: var(--muted); font-size: 0.85rem; padding: 2rem 0; text-align: center; }
+    .loading-note { color: var(--muted); font-size: 0.85rem; padding: 1rem 0; text-align: center; }
+    .lock-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; text-align: center; }
+    .lock-box { max-width: 320px; }
+    .lock-icon { font-size: 2.4rem; margin-bottom: 1rem; }
+    .lock-title { font-family: 'DM Serif Display', serif; font-size: 1.3rem; margin-bottom: 0.6rem; }
+    .lock-sub { font-size: 0.82rem; color: var(--muted); line-height: 1.6; }
+    .toast { position: fixed; bottom: 20px; left: 16px; right: 16px; background: var(--surface); border: 1px solid var(--border); padding: 12px 16px; border-radius: 10px; font-size: 0.82rem; z-index: 999; transform: translateY(20px); opacity: 0; transition: all 0.3s; pointer-events: none; text-align: center; }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.success { border-color: var(--success); color: var(--success); }
+    .toast.error { border-color: var(--danger); color: var(--danger); }
+  </style>
+</head>
+<body>
+
+<div class="lock-screen" id="lockScreen">
+  <div class="lock-box">
+    <div class="lock-icon">🔒</div>
+    <div class="lock-title">Проверка на достъпа...</div>
+    <div class="lock-sub" id="lockSub">Изчакай момент.</div>
+  </div>
+</div>
+
+<div id="app" style="display:none;">
+  <nav>
+    <div class="nav-logo">Zen<span>Airpods</span> · Admin</div>
+  </nav>
+  <div class="tabs">
+    <button class="tab active" data-tab="orders" onclick="switchTab('orders')">📋 Поръчки</button>
+    <button class="tab" data-tab="reviews" onclick="switchTab('reviews')">⭐ Ревюта</button>
+  </div>
+
+  <div class="tab-panel active" id="tab-orders">
+    <div class="toolbar">
+      <div class="toolbar-title">Поръчки</div>
+      <button class="btn-ghost" onclick="loadOrders()">↻ Обнови</button>
+    </div>
+    <div id="ordersList"><p class="loading-note">Зареждане...</p></div>
+  </div>
+
+  <div class="tab-panel" id="tab-reviews">
+    <div class="toolbar">
+      <div class="toolbar-title">Ревюта</div>
+      <button class="btn-ghost" onclick="loadReviews()">↻ Обнови</button>
+    </div>
+    <div id="reviewsList"><p class="loading-note">Зареждане...</p></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const tg = window.Telegram ? window.Telegram.WebApp : null;
+  if (tg) { tg.ready(); tg.expand(); }
+  const TG_INIT_DATA = tg ? tg.initData : '';
+
+  let SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzKj9ttuvCMJFF3DJuPBry15BuiLkWzLku2NwDDbtZS7oZ5jgHtQp1jl2d9bertHYYn/exec';
+
+  async function loadScriptUrl() {
+    try {
+      const r = await fetch('products.json?t=' + Date.now());
+      const d = await r.json();
+      if (d.settings && d.settings.scriptUrlEncoded) SCRIPT_URL = atob(d.settings.scriptUrlEncoded);
+    } catch (e) {}
+  }
+
+  function switchTab(name) {
+    document.querySelectorAll('.tab').forEach(function(t) { t.classList.toggle('active', t.dataset.tab === name); });
+    document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.toggle('active', p.id === 'tab-' + name); });
+  }
+
+  var toastTimer = null;
+  function toast(msg, type) {
+    var el = document.getElementById('toast');
+    el.textContent = msg;
+    el.className = 'toast show ' + (type || '');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function() { el.classList.remove('show'); }, 3200);
+  }
+
+  // ─── ORDERS ───
+  async function loadOrders() {
+    var list = document.getElementById('ordersList');
+    list.innerHTML = '<p class="loading-note">Зареждане...</p>';
+    try {
+      var res = await fetch(SCRIPT_URL + '?action=getOrders&tgInitData=' + encodeURIComponent(TG_INIT_DATA));
+      var data = await res.json();
+      if (data.error) throw new Error(data.error);
+      renderOrders(data.orders || []);
+    } catch (e) {
+      list.innerHTML = '<p class="loading-note">Грешка при зареждане.</p>';
+    }
+  }
+
+  function statusClass(status) {
+    if (status === 'Отказана') return 'status-cancelled';
+    if (status === 'Без отговор') return 'status-noresponse';
+    if (status === 'Нова' || !status) return 'status-new';
+    return 'status-other';
+  }
+
+  function renderOrders(orders) {
+    var list = document.getElementById('ordersList');
+    if (!orders.length) { list.innerHTML = '<p class="empty-note">Няма поръчки.</p>'; return; }
+    list.innerHTML = orders.slice().reverse().map(function(o) {
+      var orderId = o.id || (o.date + o.phone);
+      var status = o.status || 'Нова';
+      var isClosed = status === 'Отказана' || status === 'Без отговор';
+      var actions = '<div class="btn-row">';
+      if (!isClosed) {
+        actions += '<button class="small-btn danger" onclick="cancelOrder(\'' + orderId + '\',\'' + esc(o.name) + '\')">Откажи</button>';
+        actions += '<button class="small-btn" onclick="silentCancelOrder(\'' + orderId + '\',\'' + esc(o.name) + '\')">☎ Без отговор</button>';
+      }
+      if (o.email && !o.reviewLeft) {
+        actions += '<button class="small-btn accent" onclick="inviteReview(\'' + orderId + '\',\'' + esc(o.email) + '\',\'' + esc(o.name) + '\')">' + (o.reviewInvited ? '✓ Поканен' : '✉ Покани') + '</button>';
+      }
+      actions += '<button class="small-btn danger" onclick="deleteOrderConfirm(\'' + orderId + '\',\'' + esc(o.name) + '\')">🗑</button>';
+      actions += '</div>';
+
+      return '<div class="card">' +
+        '<div class="order-top"><span class="order-name">' + esc(o.name || '—') + '</span><span class="order-total">' + (o.totalEur || '—') + '</span></div>' +
+        '<div class="order-meta">' +
+          '📞 ' + esc(o.phone || '—') + (o.email ? ' · ✉ ' + esc(o.email) : '') + '<br>' +
+          '📦 ' + esc(o.courier || '') + ' · ' + esc(o.city || '') + '<br>' +
+          '🕒 ' + esc(o.date || '') + ' ' + esc(o.time || '') + ' · <span class="status-pill ' + statusClass(status) + '">' + esc(status) + '</span>' +
+          (o.reviewLeft ? ' · <span style="color:var(--success);">✓ ревю</span>' : '') +
+        '</div>' +
+        '<div class="order-items">' + esc(o.products || '') + '</div>' +
+        actions +
+      '</div>';
+    }).join('');
+  }
+
+  async function postAction(payload) {
+    payload.tgInitData = TG_INIT_DATA;
+    var res = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+    return res.json();
+  }
+
+  async function cancelOrder(orderId, name) {
+    if (!confirm('Откажи поръчката на ' + name + '? Клиентът ще получи имейл.')) return;
+    var r = await postAction({ action: 'adminCancelOrder', orderId: orderId });
+    toast(r.ok ? 'Поръчката е отказана.' : (r.message || 'Грешка'), r.ok ? 'success' : 'error');
+    if (r.ok) loadOrders();
+  }
+
+  async function silentCancelOrder(orderId, name) {
+    if (!confirm('Маркирай "' + name + '" като "Без отговор"? Клиентът НЕ се известява, имейлът му се трие.')) return;
+    var r = await postAction({ action: 'silentCancelOrder', orderId: orderId });
+    toast(r.ok ? 'Маркирано.' : (r.message || 'Грешка'), r.ok ? 'success' : 'error');
+    if (r.ok) loadOrders();
+  }
+
+  async function deleteOrderConfirm(orderId, name) {
+    if (!confirm('ТРАЙНО да изтрия поръчката на ' + name + '? Не може да се отмени.')) return;
+    var r = await postAction({ action: 'deleteOrder', orderId: orderId });
+    toast(r.ok ? 'Изтрито.' : (r.message || 'Грешка'), r.ok ? 'success' : 'error');
+    if (r.ok) loadOrders();
+  }
+
+  async function inviteReview(orderId, email, name) {
+    if (!confirm('Изпрати покана за ревю на ' + name + ' (' + email + ')?')) return;
+    var r = await postAction({ action: 'sendReviewInvite', orderId: orderId, email: email, name: name });
+    toast(r.success ? 'Поканата е изпратена.' : (r.message || 'Грешка'), r.success ? 'success' : 'error');
+    if (r.success) loadOrders();
+  }
+
+  // ─── REVIEWS ───
+  async function loadReviews() {
+    var list = document.getElementById('reviewsList');
+    list.innerHTML = '<p class="loading-note">Зареждане...</p>';
+    try {
+      var res = await fetch(SCRIPT_URL + '?action=getReviews&tgInitData=' + encodeURIComponent(TG_INIT_DATA));
+      var data = await res.json();
+      renderReviews((data.reviews || []).sort(function(a, b) { return (a.approved === b.approved) ? 0 : (a.approved ? 1 : -1); }));
+    } catch (e) {
+      list.innerHTML = '<p class="loading-note">Грешка при зареждане.</p>';
+    }
+  }
+
+  function renderReviews(reviews) {
+    var list = document.getElementById('reviewsList');
+    if (!reviews.length) { list.innerHTML = '<p class="empty-note">Няма ревюта.</p>'; return; }
+    list.innerHTML = reviews.map(function(r) {
+      return '<div class="card">' +
+        '<div class="review-stars">★★★★★</div>' +
+        '<div class="review-text">"' + esc(r.text) + '"</div>' +
+        '<div class="review-author">— ' + esc(r.name) + (r.date ? ' · ' + esc(r.date) : '') + ' · ' +
+          '<span class="status-pill ' + (r.approved ? 'status-other' : 'status-new') + '">' + (r.approved ? '✓ Одобрено' : '⏳ Чака') + '</span>' +
+        '</div>' +
+        '<div class="btn-row">' +
+          (!r.approved ? '<button class="small-btn success" onclick="approveReviewMini(\'' + r.id + '\')">✅ Одобри</button>' : '') +
+          '<button class="small-btn danger" onclick="deleteReviewMini(\'' + r.id + '\')">🗑 Изтрий</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  async function approveReviewMini(id) {
+    var r = await postAction({ action: 'approveReview', id: id });
+    if (r.success) {
+      var rewardText = '';
+      if (r.reward && r.reward.code) {
+        rewardText = r.reward.type === 'discount' ? (' 🎁 промокод -' + r.reward.value + '% (' + r.reward.code + ')') : (' 🎁 код за кейс (' + r.reward.code + ')');
+      }
+      toast('Одобрено!' + rewardText, 'success');
+      loadReviews();
+    } else {
+      toast('Грешка при одобрение', 'error');
+    }
+  }
+
+  async function deleteReviewMini(id) {
+    if (!confirm('Изтрий ревюто?')) return;
+    var r = await postAction({ action: 'deleteReview', id: id });
+    toast(r.success ? 'Изтрито.' : 'Грешка', r.success ? 'success' : 'error');
+    if (r.success) loadReviews();
+  }
+
+  function esc(s) {
+    return String(s || '').replace(/'/g, "\\'").replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  //
+  async function init() {
+    if (!tg || !TG_INIT_DATA) {
+      document.getElementById('lockSub').textContent = 'Тази страница работи само отворена през Telegram бота (бутон "Отвори админ").';
+      return;
+    }
+    await loadScriptUrl();
+    // Пробна заявка - ако сървърът отхвърли tgInitData-та (не си ти), ще видим грешка тук.
+    try {
+      var res = await fetch(SCRIPT_URL + '?action=getOrders&tgInitData=' + encodeURIComponent(TG_INIT_DATA));
+      var data = await res.json();
+      if (data.error === 'Unauthorized (Telegram)') {
+        document.getElementById('lockSub').textContent = 'Нямаш достъп до този панел.';
+        return;
+      }
+    } catch (e) {
+      document.getElementById('lockSub').textContent = 'Грешка при връзка със сървъра. Опитай отново по-късно.';
+      return;
+    }
+    document.getElementById('lockScreen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    loadOrders();
+  }
+
+  init();
+</script>
+</body>
+</html>
