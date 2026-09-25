@@ -1,318 +1,1271 @@
-<!DOCTYPE html>
-<html lang="bg">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
-  <title>ZenAirpods · Admin</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <style>
-    :root {
-      --bg: #0a0a0a; --surface: #111111; --surface2: #1a1a1a;
-      --border: #2a2a2a; --text: #f0ece4; --muted: #888;
-      --accent: #2563eb; --accent2: #4f83f1;
-      --danger: #e05252; --success: #52c07a;
+// ═══════════════════════════════════════════════════════════════
+// ZenAirpods — Google Apps Script backend
+// ═══════════════════════════════════════════════════════════════
+function runTelegramSetup() {
+  setTelegramWebhook_();
+}
+const NOTIFICATION_EMAIL = 'cazanovaeth@gmail.com';
+const SPREADSHEET_ID = '1KAO36nbn26fybFl43zL4BrQGTkWeF_XDZvzZLUmuwfA';
+const STORE_NAME = 'ZenAirpods';
+const SENDER_NAME = 'ZenAirpods';
+// Публичният адрес на сайта — използва се в линка "Откажи поръчката" в имейла,
+// и като fallback за линка "Остави ревю", ако от admin панела не е подаден
+// друг адрес (виж sendReviewInvite по-долу).
+// Ако някога смениш домейна, само тук трябва да се смени.
+const SITE_URL = 'https://zenairpods.store/';
+
+// Repo-то, от което Code.gs чете настройките за наградите (шанс/% отстъпка),
+// докато обработва поръчки/одобрения. Ако някога преместиш сайта в друго
+// GitHub repo, смени САМО този ред.
+const SITE_REPO = 'BSrank/zenpds';
+
+// Официален фиксиран курс BGN/EUR - ползва се за показване на сумата в лв.
+const EUR_RATE = 1.95583;
+
+// ── БРАНДИНГ ЦВЕТОВЕ ЗА ИМЕЙЛИТЕ (светла тема) ─────────
+// Светъл фон вместо тъмен, за да се откроява съдържанието по-добре в inbox-а.
+const PAGE_BG    = '#eef1f6';   // фон извън картата (светло сиво-синьо)
+const CARD_BG    = '#ffffff';   // основна бяла карта
+const BOX_BG     = '#f6f8fc';   // вътрешни светли кутии (продукти, данни)
+const TEXT_DARK  = '#16181d';   // основен текст
+const TEXT_MUTED = '#6b7280';   // второстепенен текст
+const BORDER     = '#e3e7ee';   // тънки разделители
+const ACCENT     = '#2563eb';   // синьо (по-наситено за четимост на бял фон)
+const ACCENT_BG  = '#eaf1ff';   // светло синьо петно
+const DANGER     = '#dc2626';   // червено за отказ
+const DANGER_BG  = '#fdecec';   // светло червено петно
+
+// ── ROUTING ───────────────────────────────────────────
+function doGet(e) {
+  const action = e.parameter.action;
+
+  // Заявки от Telegram Mini App-а носят tgInitData (подписаните данни от
+  // Telegram) - проверяваме ги ПРЕДИ да изпълним каквото и да е действие.
+  // Обикновените заявки (от admin.html, cart.js и т.н.) нямат това поле и
+  // минават през стария път, без промяна.
+  if (e.parameter.tgInitData) {
+    const auth = validateTelegramInitData_(e.parameter.tgInitData);
+    if (!auth.valid) return jsonResponse({ error: 'Unauthorized (Telegram)', debug: auth.debug });
+  }
+
+  if (action === 'verifyCancelToken')  return jsonResponse(verifyCancelToken(e.parameter));
+  if (action === 'cancelOrder')        return jsonResponse(cancelOrder({ orderId: e.parameter.order, token: e.parameter.token }));
+  if (action === 'getReviews')         return jsonResponse(getReviews());
+  if (action === 'verifyReviewToken')  return jsonResponse(verifyReviewToken(e.parameter));
+  if (action === 'getOrders')          return getOrdersJSON();
+  if (action === 'verifyPromoCode')    return jsonResponse(verifyPromoCode(e.parameter));
+  return jsonResponse({ error: 'Unknown action' });
+}
+
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+
+    // ── TELEGRAM WEBHOOK (съобщения/бутони в чата с бота) ──
+    // Telegram изпраща update-и без 'action' поле, но винаги с 'update_id'.
+    // Хващаме ги тук, преди рутирането по action, и винаги отговаряме {ok:true}
+    // бързо (Telegram повтаря заявката, ако webhook-ът отговори бавно/грешка).
+    if (data.update_id !== undefined) {
+      handleTelegramUpdate_(data);
+      return jsonResponse({ ok: true });
     }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; font-weight: 300; min-height: 100vh; padding-bottom: 2rem; }
-    nav { display:flex; align-items:center; justify-content:space-between; padding: 14px 16px; background: var(--surface); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 5; }
-    .nav-logo { font-family: 'DM Serif Display', serif; font-size: 1.2rem; }
-    .nav-logo span { color: var(--accent); }
-    .tabs { display: flex; border-bottom: 1px solid var(--border); }
-    .tab { flex: 1; padding: 12px; background: none; border: none; color: var(--muted); cursor: pointer; font-family: 'Inter', sans-serif; font-size: 0.85rem; border-bottom: 2px solid transparent; }
-    .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
-    .tab-panel { display: none; padding: 14px; }
-    .tab-panel.active { display: block; }
-    .toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-    .toolbar-title { font-family: 'DM Serif Display', serif; font-size: 1.3rem; }
-    .btn-ghost { background: none; border: 1px solid var(--border); color: var(--muted); padding: 6px 14px; border-radius: 8px; font-size: 0.75rem; cursor: pointer; font-family: 'Inter', sans-serif; }
-    .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 10px; }
-    .order-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
-    .order-name { font-size: 0.95rem; font-weight: 500; }
-    .order-total { color: var(--accent); font-size: 0.9rem; font-weight: 500; }
-    .order-meta { font-size: 0.76rem; color: var(--muted); line-height: 1.6; margin-bottom: 8px; }
-    .order-items { font-size: 0.75rem; color: var(--muted); white-space: pre-line; margin-bottom: 10px; border-top: 1px solid var(--border); padding-top: 8px; }
-    .status-pill { display: inline-block; font-size: 0.62rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 9px; border-radius: 10px; }
-    .status-new { background: rgba(37,99,235,0.15); color: var(--accent2); }
-    .status-cancelled { background: rgba(224,82,82,0.15); color: var(--danger); }
-    .status-noresponse { background: rgba(136,136,136,0.15); color: var(--muted); }
-    .status-other { background: rgba(82,192,122,0.15); color: var(--success); }
-    .btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
-    .small-btn { flex: 1; min-width: 90px; padding: 8px 10px; border-radius: 8px; cursor: pointer; font-size: 0.72rem; font-family: 'Inter', sans-serif; background: none; border: 1px solid var(--border); color: var(--muted); text-align: center; }
-    .small-btn.danger { border-color: var(--danger); color: var(--danger); }
-    .small-btn.accent { border-color: var(--accent); color: var(--accent); }
-    .small-btn.success { border-color: var(--success); color: var(--success); }
-    .review-stars { color: #e8b84d; font-size: 0.85rem; margin-bottom: 4px; }
-    .review-text { font-size: 0.85rem; font-style: italic; color: var(--text); margin-bottom: 6px; line-height: 1.5; }
-    .review-author { font-size: 0.78rem; color: var(--muted); margin-bottom: 10px; }
-    .empty-note { color: var(--muted); font-size: 0.85rem; padding: 2rem 0; text-align: center; }
-    .loading-note { color: var(--muted); font-size: 0.85rem; padding: 1rem 0; text-align: center; }
-    .lock-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; text-align: center; }
-    .lock-box { max-width: 320px; }
-    .lock-icon { font-size: 2.4rem; margin-bottom: 1rem; }
-    .lock-title { font-family: 'DM Serif Display', serif; font-size: 1.3rem; margin-bottom: 0.6rem; }
-    .lock-sub { font-size: 0.82rem; color: var(--muted); line-height: 1.6; }
-    .toast { position: fixed; bottom: 20px; left: 16px; right: 16px; background: var(--surface); border: 1px solid var(--border); padding: 12px 16px; border-radius: 10px; font-size: 0.82rem; z-index: 999; transform: translateY(20px); opacity: 0; transition: all 0.3s; pointer-events: none; text-align: center; }
-    .toast.show { transform: translateY(0); opacity: 1; }
-    .toast.success { border-color: var(--success); color: var(--success); }
-    .toast.error { border-color: var(--danger); color: var(--danger); }
-  </style>
-</head>
-<body>
 
-<div class="lock-screen" id="lockScreen">
-  <div class="lock-box">
-    <div class="lock-icon">🔒</div>
-    <div class="lock-title">Проверка на достъпа...</div>
-    <div class="lock-sub" id="lockSub">Изчакай момент.</div>
-    <textarea id="lockDebugBox" readonly style="display:none;width:100%;max-width:560px;height:220px;margin-top:14px;background:#111;color:#9ad;border:1px solid #333;border-radius:8px;padding:10px;font-size:11px;font-family:monospace;" onclick="this.select();"></textarea>
-    <button type="button" id="lockCopyBtn" style="display:none;margin-top:8px;padding:8px 14px;border-radius:8px;border:1px solid #444;background:#1a1a1a;color:#ddd;font-size:13px;" onclick="var b=document.getElementById('lockDebugBox');b.select();b.setSelectionRange(0,999999);document.execCommand('copy');this.textContent='Копирано ✓';">Копирай дебъг текста</button>
-  </div>
-</div>
+    // ── TELEGRAM MINI APP (заявки от telegram-admin.html) ──
+    // Всяка заявка от мини приложението носи tgInitData - подписан низ от
+    // Telegram, който сървърът проверява (виж validateTelegramInitData_) и
+    // сравнява подателя с TELEGRAM_CHAT_ID. Ако не съвпада/невалиден е -
+    // отказваме ВСИЧКО по-долу, преди да стигнем до което и да е действие.
+    const fromTelegramApp = !!data.tgInitData;
+    if (fromTelegramApp) {
+      const auth = validateTelegramInitData_(data.tgInitData);
+      if (!auth.valid) return jsonResponse({ ok: false, success: false, message: 'Unauthorized (Telegram)' });
+    }
 
-<div id="app" style="display:none;">
-  <nav>
-    <div class="nav-logo">Zen<span>Airpods</span> · Admin</div>
-  </nav>
-  <div class="tabs">
-    <button class="tab active" data-tab="orders" onclick="switchTab('orders')">📋 Поръчки</button>
-    <button class="tab" data-tab="reviews" onclick="switchTab('reviews')">⭐ Ревюта</button>
-  </div>
+    if (data.action === 'cancelOrder')       return jsonResponse(cancelOrder(data));
+    if (data.action === 'adminCancelOrder')  return jsonResponse(adminCancelOrder(data));
+    if (data.action === 'silentCancelOrder') return jsonResponse(silentCancelOrder(data));
+    if (data.action === 'deleteOrder')       return jsonResponse(deleteOrder(data));
+    if (data.action === 'contactForm')       return jsonResponse(handleContactForm(data));
+    if (data.action === 'submitReview')      return jsonResponse(submitReview(data));
+    if (data.action === 'sendReviewInvite')  return jsonResponse(sendReviewInvite(data));
 
-  <div class="tab-panel active" id="tab-orders">
-    <div class="toolbar">
-      <div class="toolbar-title">Поръчки</div>
-      <button class="btn-ghost" onclick="loadOrders()">↻ Обнови</button>
-    </div>
-    <div id="ordersList"><p class="loading-note">Зареждане...</p></div>
-  </div>
+    if (data.action === 'approveReview') {
+      const result = approveReview(data);
+      // Когато идва от Telegram Mini App-а, кешираме одобреното ревю директно
+      // в products.json на GitHub (ако е зададен GITHUB_PAT), за да се появи
+      // веднага на сайта - точно както прави admin.html при одобрение оттам.
+      if (fromTelegramApp && result && result.success) {
+        const review = findReviewById_(data.id);
+        if (review) syncReviewToGitHub_(Object.assign({}, review, { approved: true }), false);
+      }
+      return jsonResponse(result);
+    }
+    if (data.action === 'deleteReview') {
+      const result = deleteReview(data);
+      if (fromTelegramApp && result && result.success) syncReviewToGitHub_({ id: data.id }, true);
+      return jsonResponse(result);
+    }
 
-  <div class="tab-panel" id="tab-reviews">
-    <div class="toolbar">
-      <div class="toolbar-title">Ревюта</div>
-      <button class="btn-ghost" onclick="loadReviews()">↻ Обнови</button>
-    </div>
-    <div id="reviewsList"><p class="loading-note">Зареждане...</p></div>
-  </div>
-</div>
-
-<div class="toast" id="toast"></div>
-
-<script>
-  const tg = window.Telegram ? window.Telegram.WebApp : null;
-  if (tg) { tg.ready(); tg.expand(); }
-  const TG_INIT_DATA = tg ? tg.initData : '';
-
-  let SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzKj9ttuvCMJFF3DJuPBry15BuiLkWzLku2NwDDbtZS7oZ5jgHtQp1jl2d9bertHYYn/exec';
-
-  async function loadScriptUrl() {
-    try {
-      const r = await fetch('products.json?t=' + Date.now());
-      const d = await r.json();
-      if (d.settings && d.settings.scriptUrlEncoded) SCRIPT_URL = atob(d.settings.scriptUrlEncoded);
-    } catch (e) {}
+    // Няма action, или action==='placeOrder' -> третираме като нова поръчка
+    // (същият формат, който cart.js изпраща досега - обратно съвместимо).
+    return placeOrderInternal_(data);
+  } catch (error) {
+    return jsonResponse({ success: false, error: error.toString() });
   }
+}
 
-  function switchTab(name) {
-    document.querySelectorAll('.tab').forEach(function(t) { t.classList.toggle('active', t.dataset.tab === name); });
-    document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.toggle('active', p.id === 'tab-' + name); });
-  }
+function jsonResponse(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}
 
-  var toastTimer = null;
-  function toast(msg, type) {
-    var el = document.getElementById('toast');
-    el.textContent = msg;
-    el.className = 'toast show ' + (type || '');
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(function() { el.classList.remove('show'); }, 3200);
-  }
+// ── ORDERS SHEET HELPER ────────────────────────────────
+// ВАЖНО: използваме винаги първия sheet (index 0) на таблицата, а НЕ
+// getActiveSheet() - защото добавянето на нов sheet ("Reviews" по-долу
+// чрез insertSheet) автоматично го прави "активен" и getActiveSheet()
+// би започнал погрешно да сочи към него вместо към Orders.
+function getOrdersSheet_() {
+  return SpreadsheetApp.openById(SPREADSHEET_ID).getSheets()[0];
+}
 
-  // ─── ORDERS ───
-  async function loadOrders() {
-    var list = document.getElementById('ordersList');
-    list.innerHTML = '<p class="loading-note">Зареждане...</p>';
-    try {
-      var res = await fetch(SCRIPT_URL + '?action=getOrders&tgInitData=' + encodeURIComponent(TG_INIT_DATA));
-      var data = await res.json();
-      if (data.error) throw new Error(data.error);
-      renderOrders(data.orders || []);
-    } catch (e) {
-      list.innerHTML = '<p class="loading-note">Грешка при зареждане.</p>';
+// ── NEW ORDER ─────────────────────────────────────────
+function placeOrderInternal_(data) {
+  const sheet = getOrdersSheet_();
+
+  // ─── Промокод / награда от одобрено ревю (ако е въведен при поръчката) ───
+  // ВАЖНО: клиентът изпраща суровата сума (data.subtotalEur, БЕЗ отстъпка) -
+  // отстъпката се пресмята тук, на сървъра, за да не може някой да я подправи
+  // от браузъра. За обратна съвместимост приемаме и стария формат
+  // (data.totalEur вече форматиран "€xx.xx"), ако някога дойде такъв.
+  let promo = { applied: false };
+  let orderTotalEur = data.subtotalEur !== undefined
+    ? (parseFloat(data.subtotalEur) || 0)
+    : (parseFloat(String(data.totalEur || '0').replace(/[^0-9.,]/g, '').replace(',', '.')) || 0);
+
+  if (data.promoCode) {
+    promo = redeemPromoCode_(String(data.promoCode).trim().toUpperCase());
+    if (promo.applied && promo.type === 'discount') {
+      orderTotalEur = Math.max(0, orderTotalEur * (1 - (parseFloat(promo.value) || 0) / 100));
     }
   }
 
-  function statusClass(status) {
-    if (status === 'Отказана') return 'status-cancelled';
-    if (status === 'Без отговор') return 'status-noresponse';
-    if (status === 'Нова' || !status) return 'status-new';
-    return 'status-other';
+  let productsSummary = data.products;
+  if (promo.applied) {
+    productsSummary += '\n' + (promo.type === 'case'
+      ? '🎁 НАГРАДА: Безплатен силиконов кейс (код ' + promo.code + ')'
+      : '🎁 НАГРАДА: Промокод ' + promo.code + ' (-' + promo.value + '%)');
   }
 
-  function renderOrders(orders) {
-    var list = document.getElementById('ordersList');
-    if (!orders.length) { list.innerHTML = '<p class="empty-note">Няма поръчки.</p>'; return; }
-    list.innerHTML = orders.slice().reverse().map(function(o) {
-      var orderId = o.id || (o.date + o.phone);
-      var status = o.status || 'Нова';
-      var isClosed = status === 'Отказана' || status === 'Без отговор';
-      var actions = '<div class="btn-row">';
-      if (!isClosed) {
-        actions += '<button class="small-btn danger" onclick="cancelOrder(\'' + orderId + '\',\'' + esc(o.name) + '\')">Откажи</button>';
-        actions += '<button class="small-btn" onclick="silentCancelOrder(\'' + orderId + '\',\'' + esc(o.name) + '\')">☎ Без отговор</button>';
-      }
-      if (o.email && !o.reviewLeft) {
-        actions += '<button class="small-btn accent" onclick="inviteReview(\'' + orderId + '\',\'' + esc(o.email) + '\',\'' + esc(o.name) + '\')">' + (o.reviewInvited ? '✓ Поканен' : '✉ Покани') + '</button>';
-      }
-      actions += '<button class="small-btn danger" onclick="deleteOrderConfirm(\'' + orderId + '\',\'' + esc(o.name) + '\')">🗑</button>';
-      actions += '</div>';
+  const totalEurStr = '€' + orderTotalEur.toFixed(2);
+  const totalBgnStr = Math.round(orderTotalEur * EUR_RATE) + ' лв';
 
-      return '<div class="card">' +
-        '<div class="order-top"><span class="order-name">' + esc(o.name || '—') + '</span><span class="order-total">' + (o.totalEur || '—') + '</span></div>' +
-        '<div class="order-meta">' +
-          '📞 ' + esc(o.phone || '—') + (o.email ? ' · ✉ ' + esc(o.email) : '') + '<br>' +
-          '📦 ' + esc(o.courier || '') + ' · ' + esc(o.city || '') + '<br>' +
-          '🕒 ' + esc(o.date || '') + ' ' + esc(o.time || '') + ' · <span class="status-pill ' + statusClass(status) + '">' + esc(status) + '</span>' +
-          (o.reviewLeft ? ' · <span style="color:var(--success);">✓ ревю</span>' : '') +
+  const orderId = 'ord_' + Date.now();
+  const cancelToken = Utilities.getUuid();
+
+  sheet.appendRow([
+    data.date, data.time, data.name, data.phone, data.email || '',
+    data.city, data.courier, data.office, productsSummary,
+    totalEurStr, totalBgnStr,
+    orderId, cancelToken, 'Нова',
+    '', ''   // col 15 = reviewStatus, col 16 = reviewToken (празни при нова поръчка)
+  ]);
+
+  data.orderId = orderId;
+  data.cancelToken = cancelToken;
+  data.products = productsSummary;
+  data.totalEur = totalEurStr;
+  data.totalBgn = totalBgnStr;
+  data.promo = promo.applied ? promo : null;
+
+  if (promo.applied) markPromoUsed_(promo.code, orderId);
+
+  // Проверка в НЕкоректен.КОМ по телефонен номер (само информативно за теб,
+  // не блокира поръчката ако проверката се провали или API ключ липсва).
+  data.nekorekten = checkNekorekten_(data.phone);
+
+  sendOwnerNotification(data);
+  if (data.email && data.email.trim() !== '') {
+    sendCustomerConfirmation(data);
+  }
+  return jsonResponse({ success: true, promo: data.promo });
+}
+
+// ── EMAIL: НОВА ПОРЪЧКА → СОБСТВЕНИК ─────────────────
+function sendOwnerNotification(data) {
+  var subject = 'Нова поръчка от ' + data.name + ' — ZenAirpods';
+  var dateStr = data.date + ', ' + data.time;
+
+  var htmlBody =
+    '<div style="background:' + PAGE_BG + ';padding:32px 16px;">' +
+    '<div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;background:' + CARD_BG + ';color:' + TEXT_DARK + ';padding:40px 34px;border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,0.06);">' +
+      '<div style="border-left:3px solid ' + ACCENT + ';padding-left:16px;margin-bottom:24px;">' +
+        '<p style="font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:' + ACCENT + ';margin-bottom:4px;">Нова поръчка</p>' +
+        '<h1 style="font-size:1.6rem;font-weight:400;color:' + TEXT_DARK + ';margin:0;">' + STORE_NAME + '</h1>' +
+        '<p style="color:' + TEXT_MUTED + ';font-size:0.75rem;margin-top:4px;">' + dateStr + '</p>' +
+      '</div>' +
+
+      '<div style="background:' + BOX_BG + ';border:1px solid ' + BORDER + ';padding:20px;margin-bottom:20px;border-radius:10px;">' +
+        '<p style="font-size:0.62rem;letter-spacing:0.15em;text-transform:uppercase;color:' + TEXT_MUTED + ';margin-bottom:10px;">Продукти</p>' +
+        '<div style="color:' + TEXT_DARK + ';font-size:0.88rem;line-height:1.8;white-space:pre-line;">' + escapeHtml(data.products) + '</div>' +
+        '<div style="border-top:1px solid ' + BORDER + ';margin-top:14px;padding-top:14px;display:flex;justify-content:space-between;">' +
+          '<span style="color:' + TEXT_MUTED + ';font-size:0.8rem;">Общо</span>' +
+          '<span style="color:' + ACCENT + ';font-size:1rem;font-weight:700;">' + data.totalEur + ' (' + data.totalBgn + ')</span>' +
         '</div>' +
-        '<div class="order-items">' + esc(o.products || '') + '</div>' +
-        actions +
-      '</div>';
-    }).join('');
-  }
+      '</div>' +
 
-  async function postAction(payload) {
-    payload.tgInitData = TG_INIT_DATA;
-    var res = await fetch(SCRIPT_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(payload)
+      '<div style="background:' + BOX_BG + ';border:1px solid ' + BORDER + ';padding:20px;margin-bottom:20px;border-radius:10px;">' +
+        '<p style="font-size:0.62rem;letter-spacing:0.15em;text-transform:uppercase;color:' + TEXT_MUTED + ';margin-bottom:10px;">Данни на клиента</p>' +
+        '<table style="width:100%;border-collapse:collapse;">' +
+          '<tr><td style="padding:5px 0;color:' + TEXT_MUTED + ';font-size:0.82rem;width:100px;">Име</td><td style="padding:5px 0;color:' + TEXT_DARK + ';font-size:0.82rem;font-weight:500;">' + escapeHtml(data.name) + '</td></tr>' +
+          '<tr><td style="padding:5px 0;color:' + TEXT_MUTED + ';font-size:0.82rem;">Телефон</td><td style="padding:5px 0;font-size:0.82rem;"><a href="tel:' + data.phone + '" style="color:' + ACCENT + ';">' + data.phone + '</a></td></tr>' +
+          '<tr><td style="padding:5px 0;color:' + TEXT_MUTED + ';font-size:0.82rem;">Имейл</td><td style="padding:5px 0;color:' + TEXT_DARK + ';font-size:0.82rem;">' + (data.email ? escapeHtml(data.email) : 'Не е оставен') + '</td></tr>' +
+          '<tr><td style="padding:5px 0;color:' + TEXT_MUTED + ';font-size:0.82rem;">Град</td><td style="padding:5px 0;color:' + TEXT_DARK + ';font-size:0.82rem;">' + escapeHtml(data.city) + '</td></tr>' +
+          '<tr><td style="padding:5px 0;color:' + TEXT_MUTED + ';font-size:0.82rem;">Куриер</td><td style="padding:5px 0;color:' + TEXT_DARK + ';font-size:0.82rem;">' + escapeHtml(data.courier) + '</td></tr>' +
+          '<tr><td style="padding:5px 0;color:' + TEXT_MUTED + ';font-size:0.82rem;">Офис</td><td style="padding:5px 0;color:' + TEXT_DARK + ';font-size:0.82rem;">' + escapeHtml(data.office) + '</td></tr>' +
+        '</table>' +
+      '</div>' +
+
+      nekorektenBadgeHtml(data.nekorekten, data.phone) +
+
+      promoBlockOwner_(data.promo) +
+
+      '<div style="background:' + ACCENT_BG + ';border:1px dashed ' + ACCENT + ';padding:16px 18px;border-radius:10px;margin-bottom:20px;">' +
+        '<p style="font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;color:' + ACCENT + ';margin-bottom:8px;">Следващи стъпки</p>' +
+        '<p style="color:' + TEXT_DARK + ';font-size:0.8rem;line-height:1.8;">1. Обадете се на клиента<br>2. Подгответе продуктите<br>3. Информирайте за преглед и тест<br>4. Изпратете с куриера</p>' +
+      '</div>' +
+
+      '<p style="color:' + TEXT_MUTED + ';font-size:0.68rem;margin-top:24px;">Изпратено от zenairpods.store · ID: ' + data.orderId + '</p>' +
+    '</div>' +
+    '</div>';
+
+  var plainBody = 'НОВА ПОРЪЧКА ОТ ZENAIRPODS.STORE\n\n' +
+    'ПОРЪЧАНИ ПРОДУКТИ:\n' + data.products + '\n\n' +
+    'ОБЩА СУМА:\nEUR: ' + data.totalEur + '\nBGN: ' + data.totalBgn + '\n\n' +
+    'ДАННИ НА КЛИЕНТА:\nИме: ' + data.name + '\nТелефон: ' + data.phone + '\n' +
+    (data.email ? 'Имейл: ' + data.email : 'Имейл: Не е оставен') + '\nГрад: ' + data.city + '\n\n' +
+    'ДОСТАВКА:\nКуриер: ' + data.courier + '\nОфис: ' + data.office + '\n\n' +
+    'Дата: ' + data.date + ', ' + data.time + '\n\n' +
+    nekorektenPlainText(data.nekorekten);
+
+  MailApp.sendEmail({ to: NOTIFICATION_EMAIL, subject: subject, body: plainBody, htmlBody: htmlBody, name: 'ZenAirpods' });
+}
+
+// Малка кутийка в имейла до собственика, ако поръчката ползва награда/промокод -
+// напомня да сложи безплатния кейс в пратката, ако е такъв типът награда.
+function promoBlockOwner_(promo) {
+  if (!promo) return '';
+  return '<div style="background:' + ACCENT_BG + ';border:1px solid ' + ACCENT + ';padding:14px 18px;border-radius:10px;margin-bottom:20px;">' +
+    '<p style="font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;color:' + ACCENT + ';margin-bottom:6px;">⚠ Използвана награда</p>' +
+    '<p style="color:' + TEXT_DARK + ';font-size:0.82rem;line-height:1.6;">' + (promo.type === 'case'
+      ? '🎁 Клиентът е спечелил <strong>безплатен силиконов кейс</strong> — не забравяй да го включиш в пратката! (код ' + promo.code + ')'
+      : '🎁 Приложена е отстъпка <strong>-' + promo.value + '%</strong> с код ' + promo.code) +
+    '</p></div>';
+}
+
+// Малка HTML "значка" в имейла до собственика - статус от НЕкоректен.КОМ.
+// Не се показва в имейла до клиента - само за твоя вътрешна информация.
+function nekorektenBadgeHtml(status, phone) {
+  if (!status || !status.checked) {
+    return ''; // без бадж, ако проверката не е направена (напр. без API ключ)
+  }
+  if (status.count > 0) {
+    return '<div style="background:' + DANGER_BG + ';border:1px solid ' + DANGER + ';padding:14px 18px;border-radius:10px;margin-bottom:20px;">' +
+      '<p style="font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;color:' + DANGER + ';margin-bottom:6px;">⚠ НЕкоректен.КОМ</p>' +
+      '<p style="color:' + TEXT_DARK + ';font-size:0.82rem;line-height:1.6;">Намерени <strong>' + status.count + '</strong> репорта за този телефонен номер (' + escapeHtml(phone || '') + '). Провери детайлите на: ' +
+      '<a href="https://nekorekten.com" style="color:' + DANGER + ';">nekorekten.com</a></p>' +
+    '</div>';
+  }
+  return '<div style="background:' + BOX_BG + ';border:1px solid ' + BORDER + ';padding:12px 18px;border-radius:10px;margin-bottom:20px;">' +
+    '<p style="color:#16a34a;font-size:0.78rem;">✓ Няма репорти в НЕкоректен.КОМ за този телефон</p>' +
+  '</div>';
+}
+
+function nekorektenPlainText(status) {
+  if (!status || !status.checked) return '';
+  if (status.count > 0) return 'ВНИМАНИЕ: ' + status.count + ' репорта в НЕкоректен.КОМ за този телефон!';
+  return 'НЕкоректен.КОМ: няма репорти за този телефон.';
+}
+
+// ── EMAIL: НОВА ПОРЪЧКА → КЛИЕНТ ─────────────────────
+function sendCustomerConfirmation(data) {
+  var subject = 'Вашата поръчка от ZenAirpods е получена!';
+  var firstName = data.name.split(' ')[0];
+  var cancelUrl = SITE_URL + 'cancel.html?order=' + encodeURIComponent(data.orderId) + '&token=' + encodeURIComponent(data.cancelToken);
+
+  var htmlBody =
+    '<div style="background:' + PAGE_BG + ';padding:32px 16px;">' +
+    '<div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;background:' + CARD_BG + ';color:' + TEXT_DARK + ';padding:40px 34px;border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,0.06);">' +
+      '<div style="text-align:center;margin-bottom:2rem;">' +
+        '<h1 style="font-size:1.7rem;font-weight:400;color:' + TEXT_DARK + ';margin:0;">' + STORE_NAME + '</h1>' +
+        '<p style="color:' + ACCENT + ';font-size:0.7rem;letter-spacing:0.2em;text-transform:uppercase;margin-top:6px;">Поръчката е получена</p>' +
+      '</div>' +
+
+      '<p style="color:' + TEXT_DARK + ';font-size:1rem;line-height:1.7;margin-bottom:1.2rem;">Здравей, <strong>' + escapeHtml(firstName) + '</strong>!</p>' +
+      '<p style="color:' + TEXT_MUTED + ';font-size:0.85rem;line-height:1.7;margin-bottom:1.6rem;">Благодарим за твоята поръчка! Ще се свържем с теб в рамките на 24 часа, за да потвърдим детайлите.</p>' +
+
+      '<div style="background:' + BOX_BG + ';border:1px solid ' + BORDER + ';padding:20px;margin-bottom:1.6rem;border-radius:10px;">' +
+        '<p style="font-size:0.62rem;letter-spacing:0.15em;text-transform:uppercase;color:' + TEXT_MUTED + ';margin-bottom:10px;">Продукти</p>' +
+        '<div style="color:' + TEXT_DARK + ';font-size:0.88rem;line-height:1.8;white-space:pre-line;">' + escapeHtml(data.products) + '</div>' +
+        '<div style="border-top:1px solid ' + BORDER + ';margin-top:14px;padding-top:14px;display:flex;justify-content:space-between;">' +
+          '<span style="color:' + TEXT_MUTED + ';font-size:0.8rem;">Общо</span>' +
+          '<span style="color:' + ACCENT + ';font-size:1rem;font-weight:700;">' + data.totalEur + ' (' + data.totalBgn + ')</span>' +
+        '</div>' +
+        '<p style="color:' + TEXT_MUTED + ';font-size:0.68rem;margin-top:10px;">Забележка: сумата НЕ включва куриерската услуга — заплаща се при доставка.</p>' +
+      '</div>' +
+
+      '<div style="background:' + BOX_BG + ';border:1px solid ' + BORDER + ';padding:20px;margin-bottom:1.6rem;border-radius:10px;">' +
+        '<p style="font-size:0.62rem;letter-spacing:0.15em;text-transform:uppercase;color:' + TEXT_MUTED + ';margin-bottom:10px;">Адрес за доставка</p>' +
+        '<table style="width:100%;border-collapse:collapse;">' +
+          '<tr><td style="padding:4px 0;color:' + TEXT_MUTED + ';font-size:0.82rem;width:90px;">Куриер</td><td style="padding:4px 0;color:' + TEXT_DARK + ';font-size:0.82rem;">' + escapeHtml(data.courier) + '</td></tr>' +
+          '<tr><td style="padding:4px 0;color:' + TEXT_MUTED + ';font-size:0.82rem;">Офис</td><td style="padding:4px 0;color:' + TEXT_DARK + ';font-size:0.82rem;">' + escapeHtml(data.office) + '</td></tr>' +
+          '<tr><td style="padding:4px 0;color:' + TEXT_MUTED + ';font-size:0.82rem;">Град</td><td style="padding:4px 0;color:' + TEXT_DARK + ';font-size:0.82rem;">' + escapeHtml(data.city) + '</td></tr>' +
+        '</table>' +
+      '</div>' +
+
+      (data.promo ? '<div style="background:' + ACCENT_BG + ';border:1px solid ' + ACCENT + ';padding:14px 18px;border-radius:10px;margin-bottom:1.6rem;">' +
+        '<p style="color:' + ACCENT + ';font-size:0.85rem;">' + (data.promo.type === 'case'
+          ? '🎁 Твоята награда е приложена: <strong>безплатен силиконов кейс</strong>!'
+          : '🎁 Твоят промокод е приложен: <strong>-' + data.promo.value + '%</strong> отстъпка!') +
+        '</p></div>' : '') +
+
+      '<div style="background:' + ACCENT_BG + ';border:1px dashed ' + ACCENT + ';padding:16px 18px;border-radius:10px;margin-bottom:1.6rem;">' +
+        '<p style="font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;color:' + ACCENT + ';margin-bottom:8px;">Преглед и тест</p>' +
+        '<p style="color:' + TEXT_DARK + ';font-size:0.8rem;line-height:1.7;">Можеш да прегледаш продукта преди заплащане!</p>' +
+      '</div>' +
+
+      '<div style="text-align:center;margin-bottom:1.6rem;">' +
+        '<a href="' + cancelUrl + '" style="display:inline-block;color:' + DANGER + ';font-size:0.72rem;letter-spacing:0.08em;text-transform:uppercase;text-decoration:underline;">Откажи поръчката</a>' +
+      '</div>' +
+
+      '<p style="color:' + TEXT_MUTED + ';font-size:0.82rem;line-height:1.7;">Въпроси? <a href="tel:0876127997" style="color:' + ACCENT + ';">0876 127 997</a> · <a href="' + SITE_URL + '" style="color:' + ACCENT + ';">zenairpods.store</a></p>' +
+      '<p style="color:' + TEXT_MUTED + ';font-size:0.68rem;margin-top:1.6rem;">С уважение, екипът на ' + STORE_NAME + ' · ID: ' + data.orderId + '</p>' +
+    '</div>' +
+    '</div>';
+
+  var plainBody = 'Здравейте ' + firstName + ',\n\n' +
+    'Благодарим за вашата поръчка!\n\n' +
+    'ПОРЪЧАНИ ПРОДУКТИ:\n' + data.products + '\n' +
+    'СТОЙНОСТ: ' + data.totalEur + ' (' + data.totalBgn + ')\n\n' +
+    'АДРЕС ЗА ДОСТАВКА:\nКуриер: ' + data.courier + '\nОфис: ' + data.office + '\nГрад: ' + data.city + '\n\n' +
+    'Ще се свържем с вас в рамките на 24 часа.\n\n' +
+    'Ако искаш да откажеш поръчката: ' + cancelUrl + '\n\n' +
+    'Въпроси? 0876 127 997\nzenairpods.store\n\nС уважение,\nЕкипът на ZenAirpods';
+
+  MailApp.sendEmail({ to: data.email, subject: subject, body: plainBody, htmlBody: htmlBody, name: 'ZenAirpods' });
+}
+
+// ── CANCEL ORDER ──────────────────────────────────────
+function verifyCancelToken(params) {
+  const sheet = getOrdersSheet_();
+  const rows = sheet.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    const orderId = String(rows[i][11] || '');
+    const cancelToken = String(rows[i][12] || '');
+    const status = String(rows[i][13] || '');
+    if (orderId === params.order && cancelToken === params.token) {
+      if (status === 'Отказана' || cancelToken.startsWith('USED_')) {
+        return { valid: false, message: 'Поръчката вече е отказана.' };
+      }
+      return { valid: true, order: { name: rows[i][2], items: rows[i][8], total: rows[i][9] + ' (' + rows[i][10] + ')' } };
+    }
+  }
+  return { valid: false, message: 'Невалиден линк.' };
+}
+
+function cancelOrder(data) {
+  const sheet = getOrdersSheet_();
+  const rows = sheet.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    const orderId = String(rows[i][11] || '');
+    const cancelToken = String(rows[i][12] || '');
+    const status = String(rows[i][13] || '');
+    if (orderId === data.orderId && cancelToken === data.token) {
+      if (status === 'Отказана' || cancelToken.startsWith('USED_')) {
+        return { ok: false, message: 'Поръчката вече е отказана.' };
+      }
+      sheet.getRange(i + 1, 14).setValue('Отказана');           // status column (col 14)
+      sheet.getRange(i + 1, 13).setValue('USED_' + Date.now());  // изразходва токена (col 13)
+
+      sendCancellationEmails_(rows[i][2], rows[i][3], rows[i][4], rows[i][8], rows[i][9] + ' (' + rows[i][10] + ')');
+
+      return { ok: true };
+    }
+  }
+  return { ok: false, message: 'Невалиден линк.' };
+}
+
+// Изпраща имейл до собственика + (ако има) до клиента, че поръчката е отказана.
+// Ползва се както от клиентския "Откажи поръчката" линк (cancelOrder по-горе),
+// така и от отказването на поръчка директно от admin панела (adminCancelOrder).
+function sendCancellationEmails_(clientName, clientPhone, clientEmail, items, totalStr) {
+  const dateStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd.MM.yyyy HH:mm');
+
+  const ownerHtml =
+    '<div style="background:' + PAGE_BG + ';padding:32px 16px;">' +
+    '<div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;background:' + CARD_BG + ';color:' + TEXT_DARK + ';padding:40px 34px;border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,0.06);">' +
+      '<div style="border-left:3px solid ' + DANGER + ';padding-left:16px;margin-bottom:24px;">' +
+        '<p style="font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:' + DANGER + ';margin-bottom:4px;">Отказана поръчка</p>' +
+        '<h1 style="font-size:1.6rem;font-weight:400;color:' + TEXT_DARK + ';margin:0;">' + STORE_NAME + '</h1>' +
+        '<p style="color:' + TEXT_MUTED + ';font-size:0.75rem;margin-top:4px;">' + dateStr + '</p>' +
+      '</div>' +
+      '<div style="background:' + BOX_BG + ';border:1px solid ' + BORDER + ';padding:20px;border-radius:10px;">' +
+        '<table style="width:100%;border-collapse:collapse;">' +
+          '<tr><td style="padding:5px 0;color:' + TEXT_MUTED + ';font-size:0.82rem;width:100px;">Клиент</td><td style="padding:5px 0;color:' + TEXT_DARK + ';font-size:0.82rem;font-weight:500;">' + escapeHtml(clientName) + '</td></tr>' +
+          '<tr><td style="padding:5px 0;color:' + TEXT_MUTED + ';font-size:0.82rem;">Телефон</td><td style="padding:5px 0;font-size:0.82rem;"><a href="tel:' + clientPhone + '" style="color:' + ACCENT + ';">' + clientPhone + '</a></td></tr>' +
+          '<tr><td style="padding:5px 0;color:' + TEXT_MUTED + ';font-size:0.82rem;">Имейл</td><td style="padding:5px 0;color:' + TEXT_DARK + ';font-size:0.82rem;">' + (clientEmail || '—') + '</td></tr>' +
+          '<tr><td style="padding:5px 0;color:' + TEXT_MUTED + ';font-size:0.82rem;">Продукти</td><td style="padding:5px 0;color:' + TEXT_DARK + ';font-size:0.82rem;">' + String(items).replace(/\n/g, '<br>') + '</td></tr>' +
+          '<tr><td style="padding:5px 0;color:' + TEXT_MUTED + ';font-size:0.82rem;">Сума</td><td style="padding:5px 0;color:' + DANGER + ';font-size:0.82rem;font-weight:500;">' + totalStr + '</td></tr>' +
+        '</table>' +
+      '</div>' +
+      '<p style="color:' + TEXT_MUTED + ';font-size:0.68rem;margin-top:24px;">© ' + STORE_NAME + '</p>' +
+    '</div>' +
+    '</div>';
+  MailApp.sendEmail({
+    to: NOTIFICATION_EMAIL,
+    subject: 'Отказана поръчка — ' + clientName,
+    body: 'Клиент ' + clientName + ' отказа поръчката си.',
+    htmlBody: ownerHtml,
+    name: 'ZenAirpods'
+  });
+
+  // Имейл до клиента (ако има)
+  if (clientEmail) {
+    const clientHtml =
+      '<div style="background:' + PAGE_BG + ';padding:32px 16px;">' +
+      '<div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;background:' + CARD_BG + ';color:' + TEXT_DARK + ';padding:40px 34px;border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,0.06);">' +
+        '<div style="text-align:center;margin-bottom:2rem;"><h1 style="font-size:1.6rem;font-weight:400;color:' + TEXT_DARK + ';">' + STORE_NAME + '</h1></div>' +
+        '<div style="background:' + DANGER_BG + ';border:1px solid ' + BORDER + ';border-left:3px solid ' + DANGER + ';padding:20px;border-radius:10px;margin-bottom:24px;">' +
+          '<p style="font-size:0.72rem;color:' + DANGER + ';letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px;">Поръчката е отказана</p>' +
+          '<p style="color:' + TEXT_DARK + ';font-size:0.85rem;line-height:1.7;">Здравей, <strong>' + escapeHtml(clientName) + '</strong>!</p>' +
+          '<p style="color:' + TEXT_MUTED + ';font-size:0.85rem;line-height:1.7;margin-top:8px;">Потвърждаваме, че поръчката ти беше отказана. Няма да бъде изпратена.</p>' +
+        '</div>' +
+        '<p style="color:' + TEXT_MUTED + ';font-size:0.82rem;line-height:1.7;">При въпроси не се колебай да се свържеш с нас на <a href="tel:0876127997" style="color:' + ACCENT + ';">0876 127 997</a>.</p>' +
+        '<p style="color:' + TEXT_MUTED + ';font-size:0.68rem;margin-top:24px;">© ' + STORE_NAME + '</p>' +
+      '</div>' +
+      '</div>';
+    MailApp.sendEmail({
+      to: clientEmail,
+      subject: 'Поръчката ти беше отказана — ZenAirpods',
+      body: 'Поръчката ти беше успешно отказана.',
+      htmlBody: clientHtml,
+      name: 'ZenAirpods'
     });
-    return res.json();
   }
+}
 
-  async function cancelOrder(orderId, name) {
-    if (!confirm('Откажи поръчката на ' + name + '? Клиентът ще получи имейл.')) return;
-    var r = await postAction({ action: 'adminCancelOrder', orderId: orderId });
-    toast(r.ok ? 'Поръчката е отказана.' : (r.message || 'Грешка'), r.ok ? 'success' : 'error');
-    if (r.ok) loadOrders();
-  }
-
-  async function silentCancelOrder(orderId, name) {
-    if (!confirm('Маркирай "' + name + '" като "Без отговор"? Клиентът НЕ се известява, имейлът му се трие.')) return;
-    var r = await postAction({ action: 'silentCancelOrder', orderId: orderId });
-    toast(r.ok ? 'Маркирано.' : (r.message || 'Грешка'), r.ok ? 'success' : 'error');
-    if (r.ok) loadOrders();
-  }
-
-  async function deleteOrderConfirm(orderId, name) {
-    if (!confirm('ТРАЙНО да изтрия поръчката на ' + name + '? Не може да се отмени.')) return;
-    var r = await postAction({ action: 'deleteOrder', orderId: orderId });
-    toast(r.ok ? 'Изтрито.' : (r.message || 'Грешка'), r.ok ? 'success' : 'error');
-    if (r.ok) loadOrders();
-  }
-
-  async function inviteReview(orderId, email, name) {
-    if (!confirm('Изпрати покана за ревю на ' + name + ' (' + email + ')?')) return;
-    var r = await postAction({ action: 'sendReviewInvite', orderId: orderId, email: email, name: name });
-    toast(r.success ? 'Поканата е изпратена.' : (r.message || 'Грешка'), r.success ? 'success' : 'error');
-    if (r.success) loadOrders();
-  }
-
-  // ─── REVIEWS ───
-  async function loadReviews() {
-    var list = document.getElementById('reviewsList');
-    list.innerHTML = '<p class="loading-note">Зареждане...</p>';
-    try {
-      var res = await fetch(SCRIPT_URL + '?action=getReviews&tgInitData=' + encodeURIComponent(TG_INIT_DATA));
-      var data = await res.json();
-      renderReviews((data.reviews || []).sort(function(a, b) { return (a.approved === b.approved) ? 0 : (a.approved ? 1 : -1); }));
-    } catch (e) {
-      list.innerHTML = '<p class="loading-note">Грешка при зареждане.</p>';
-    }
-  }
-
-  function renderReviews(reviews) {
-    var list = document.getElementById('reviewsList');
-    if (!reviews.length) { list.innerHTML = '<p class="empty-note">Няма ревюта.</p>'; return; }
-    list.innerHTML = reviews.map(function(r) {
-      return '<div class="card">' +
-        '<div class="review-stars">★★★★★</div>' +
-        '<div class="review-text">"' + esc(r.text) + '"</div>' +
-        '<div class="review-author">— ' + esc(r.name) + (r.date ? ' · ' + esc(r.date) : '') + ' · ' +
-          '<span class="status-pill ' + (r.approved ? 'status-other' : 'status-new') + '">' + (r.approved ? '✓ Одобрено' : '⏳ Чака') + '</span>' +
-        '</div>' +
-        '<div class="btn-row">' +
-          (!r.approved ? '<button class="small-btn success" onclick="approveReviewMini(\'' + r.id + '\')">✅ Одобри</button>' : '') +
-          '<button class="small-btn danger" onclick="deleteReviewMini(\'' + r.id + '\')">🗑 Изтрий</button>' +
-        '</div>' +
-      '</div>';
-    }).join('');
-  }
-
-  async function approveReviewMini(id) {
-    var r = await postAction({ action: 'approveReview', id: id });
-    if (r.success) {
-      var rewardText = '';
-      if (r.reward && r.reward.code) {
-        rewardText = r.reward.type === 'discount' ? (' 🎁 промокод -' + r.reward.value + '% (' + r.reward.code + ')') : (' 🎁 код за кейс (' + r.reward.code + ')');
+// ── АДМИН: ОТКАЗ / ИЗТРИВАНЕ НА ПОРЪЧКА ─────────────────
+// За разлика от cancelOrder (по-горе), тук няма клиентски token - извикващият
+// вече е логнат в admin панела (парола + GitHub token), затова търсим директно
+// по orderId. Клиентът получава същия имейл за отказ, както при самостоятелен отказ.
+function adminCancelOrder(data) {
+  const sheet = getOrdersSheet_();
+  const rows = sheet.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    const orderId = String(rows[i][11] || '');
+    if (orderId === String(data.orderId)) {
+      const status = String(rows[i][13] || '');
+      const cancelToken = String(rows[i][12] || '');
+      if (status === 'Отказана' || cancelToken.startsWith('USED_')) {
+        return { ok: false, message: 'Поръчката вече е отказана.' };
       }
-      toast('Одобрено!' + rewardText, 'success');
-      loadReviews();
-    } else {
-      toast('Грешка при одобрение', 'error');
+      sheet.getRange(i + 1, 14).setValue('Отказана');
+      sheet.getRange(i + 1, 13).setValue('USED_' + Date.now());
+
+      sendCancellationEmails_(rows[i][2], rows[i][3], rows[i][4], rows[i][8], rows[i][9] + ' (' + rows[i][10] + ')');
+
+      return { ok: true };
     }
   }
+  return { ok: false, message: 'Поръчката не е намерена.' };
+}
 
-  async function deleteReviewMini(id) {
-    if (!confirm('Изтрий ревюто?')) return;
-    var r = await postAction({ action: 'deleteReview', id: id });
-    toast(r.success ? 'Изтрито.' : 'Грешка', r.success ? 'success' : 'error');
-    if (r.success) loadReviews();
+// "Тих" отказ - САМО за вътрешна употреба (напр. клиент не вдига телефона /
+// не отговаря на обаждания за потвърждение). За разлика от adminCancelOrder,
+// тук НЕ се изпраща никакъв имейл (нито до клиента, нито до собственика) - и
+// имейлът на клиента се трие от реда, за да не се трупа и да не изскача
+// повече бутонът "Покани за ревю" за поръчка, която така или иначе няма да се
+// изпрати.
+function silentCancelOrder(data) {
+  const sheet = getOrdersSheet_();
+  const rows = sheet.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    const orderId = String(rows[i][11] || '');
+    if (orderId === String(data.orderId)) {
+      sheet.getRange(i + 1, 5).setValue('');                     // изтрива имейла (col 5)
+      sheet.getRange(i + 1, 14).setValue('Без отговор');          // status column (col 14)
+      sheet.getRange(i + 1, 13).setValue('USED_' + Date.now());   // обезсилва cancel token-а (col 13)
+      return { ok: true };
+    }
+  }
+  return { ok: false, message: 'Поръчката не е намерена.' };
+}
+
+// Трайно изтрива реда на поръчката от таблицата (без имейл - само вътрешно
+// чистене на admin панела). Няма връщане назад, затова admin.html пита за
+// потвърждение преди да извика това действие.
+function deleteOrder(data) {
+  const sheet = getOrdersSheet_();
+  const rows = sheet.getDataRange().getValues();
+  for (let i = 1; i < rows.length; i++) {
+    const orderId = String(rows[i][11] || '');
+    if (orderId === String(data.orderId)) {
+      sheet.deleteRow(i + 1);
+      return { ok: true };
+    }
+  }
+  return { ok: false, message: 'Поръчката не е намерена.' };
+}
+
+// ── ORDERS (за admin панела) ───────────────────────────
+function getOrdersJSON() {
+  const sheet = getOrdersSheet_();
+  const rows = sheet.getDataRange().getValues();
+  const orders = [];
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row[2]) continue;
+    orders.push({
+      date: row[0], time: row[1], name: row[2], phone: row[3], email: row[4],
+      city: row[5], courier: row[6], office: row[7], products: row[8],
+      totalEur: row[9], totalBgn: row[10], id: row[11] || '',
+      status: row[13] || 'Нова',
+      reviewInvited: row[14] === 'invited',
+      reviewLeft: row[14] === 'reviewed'
+    });
+  }
+  return jsonResponse({ orders: orders });
+}
+
+// ── CONTACT FORM (само когато е активиран режим "форма" в Настройки) ──
+// Имейлът на собственика (NOTIFICATION_EMAIL) е константа тук, в бекенда -
+// затова никога не се появява в HTML-а на публичния сайт.
+function handleContactForm(data) {
+  var subject = 'Ново съобщение от ' + (data.name || 'непознат') + ' — ' + STORE_NAME;
+  var htmlBody =
+    '<div style="background:' + PAGE_BG + ';padding:32px 16px;">' +
+    '<div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;background:' + CARD_BG + ';color:' + TEXT_DARK + ';padding:40px 34px;border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,0.06);">' +
+      '<h1 style="font-size:1.4rem;font-weight:400;color:' + TEXT_DARK + ';margin-bottom:1.2rem;">Ново съобщение — ' + STORE_NAME + '</h1>' +
+      '<table style="width:100%;border-collapse:collapse;margin-bottom:1rem;">' +
+        '<tr><td style="padding:5px 0;color:' + TEXT_MUTED + ';font-size:0.82rem;width:90px;">Име</td><td style="padding:5px 0;color:' + TEXT_DARK + ';font-size:0.82rem;">' + escapeHtml(data.name) + '</td></tr>' +
+        '<tr><td style="padding:5px 0;color:' + TEXT_MUTED + ';font-size:0.82rem;">Имейл</td><td style="padding:5px 0;color:' + TEXT_DARK + ';font-size:0.82rem;"><a href="mailto:' + escapeHtml(data.email) + '" style="color:' + ACCENT + ';">' + escapeHtml(data.email) + '</a></td></tr>' +
+      '</table>' +
+      '<div style="background:' + BOX_BG + ';border:1px solid ' + BORDER + ';padding:16px;border-radius:10px;white-space:pre-line;color:' + TEXT_DARK + ';font-size:0.85rem;line-height:1.7;">' + escapeHtml(data.msg) + '</div>' +
+    '</div>' +
+    '</div>';
+  MailApp.sendEmail({
+    to: NOTIFICATION_EMAIL,
+    subject: subject,
+    body: 'От: ' + data.name + ' <' + data.email + '>\n\n' + data.msg,
+    htmlBody: htmlBody,
+    name: STORE_NAME,
+    replyTo: data.email || undefined
+  });
+  return { success: true };
+}
+
+// ── REVIEWS ─────────────────────────────────────────────
+function getReviewsSheet_() {
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName('Reviews');
+  if (!sheet) {
+    sheet = ss.insertSheet('Reviews');
+    sheet.getRange(1, 1, 1, 7).setValues([['ID', 'OrderId', 'Name', 'Text', 'Rating', 'Date', 'Approved']]);
+    sheet.getRange(1, 1, 1, 7).setFontWeight('bold');
+  }
+  return sheet;
+}
+
+function getReviews() {
+  var sheet = getReviewsSheet_();
+  var rows = sheet.getDataRange().getValues();
+  if (rows.length <= 1) return { reviews: [] };
+  var reviews = rows.slice(1).map(function(r) {
+    return { id: r[0], orderId: r[1], name: r[2], text: r[3], rating: r[4], date: r[5], approved: r[6] === true || r[6] === 'TRUE' };
+  });
+  return { reviews: reviews };
+}
+
+function submitReview(data) {
+  var sheet = getOrdersSheet_();
+  var rows = sheet.getDataRange().getValues();
+  var foundRow = -1;
+  // Проверяваме и token-а, не само orderId - иначе всеки, който познае/досети
+  // формата на orderId, би могъл да остави ревю без покана.
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][11]) === String(data.orderId) && String(rows[i][15]) === String(data.token)) {
+      foundRow = i;
+      break;
+    }
+  }
+  if (foundRow === -1) return { success: false, message: 'Невалиден код или поръчка.' };
+  if (String(rows[foundRow][14]) === 'reviewed') {
+    return { success: false, message: 'Вече си оставил ревю за тази поръчка.' };
   }
 
-  function esc(s) {
-    return String(s || '').replace(/'/g, "\\'").replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  sheet.getRange(foundRow + 1, 15).setValue('reviewed'); // col 15 = reviewStatus
+
+  var rsheet = getReviewsSheet_();
+  var id = 'rev_' + Date.now();
+  var date = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd.MM.yyyy');
+  var clientName = rows[foundRow][2];
+  rsheet.appendRow([id, data.orderId, data.name || clientName || '', data.text || '', data.rating || 5, date, false]);
+
+  return { success: true };
+}
+
+// ── НАГРАДИ ЗА РЕВЮ / ПРОМОКОДОВЕ ────────────────────────
+function getRewardsSheet_() {
+  var ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sheet = ss.getSheetByName('Rewards');
+  if (!sheet) {
+    sheet = ss.insertSheet('Rewards');
+    sheet.getRange(1, 1, 1, 10).setValues([['Code', 'Type', 'Value', 'Name', 'Email', 'OrderId (спечелен от)', 'Created', 'Used', 'UsedOrderId', 'UsedDate']]);
+    sheet.getRange(1, 1, 1, 10).setFontWeight('bold');
+  }
+  return sheet;
+}
+
+// Взима % шанс за промокод (вместо кейс) и % отстъпка от Settings в products.json.
+// Ако там няма зададени стойности (или fetch-ът се провали), по подразбиране е
+// 0% шанс -> винаги кейс, което е безопасен fallback.
+function getRewardSettings_() {
+  try {
+    var url = 'https://raw.githubusercontent.com/' + SITE_REPO + '/main/products.json?t=' + new Date().getTime();
+    var res = UrlFetchApp.fetch(url, { muteHttpExceptions: true });
+    var data = JSON.parse(res.getContentText());
+    var s = data.settings || {};
+    return {
+      chance: Number(s.rewardDiscountChance) || 0,
+      percent: Number(s.rewardDiscountPercent) || 0
+    };
+  } catch (e) {
+    return { chance: 0, percent: 0 };
+  }
+}
+
+// Генерира уникален код (проверява срещу всички съществуващи в Rewards листа).
+// Избягва объркващи символи (0/O, 1/I).
+function generateUniqueRewardCode() {
+  var sheet = getRewardsSheet_();
+  var rows = sheet.getDataRange().getValues();
+  var existing = {};
+  for (var i = 1; i < rows.length; i++) {
+    if (rows[i][0]) existing[String(rows[i][0]).toUpperCase()] = true;
+  }
+  var chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  var code;
+  do {
+    code = '';
+    for (var j = 0; j < 8; j++) code += chars.charAt(Math.floor(Math.random() * chars.length));
+  } while (existing[code]);
+  return code;
+}
+
+function createReviewReward(orderId, name, email) {
+  var settings = getRewardSettings_();
+  var roll = Math.random() * 100;
+  var type, value;
+  if (roll < settings.chance) {
+    type = 'discount';
+    value = settings.percent;
+  } else {
+    type = 'case';
+    value = 0;
   }
 
-  // ─── AUTH (Telegram WebApp initData) ───
-  // Не пазим локална парола - самото Telegram initData (подписано от Telegram
-  // със секретния токен на бота) доказва кой е човекът. Сървърът (Code.gs)
-  // проверява подписа И че user id-то съвпада с TELEGRAM_CHAT_ID, преди да
-  // изпълни каквото и да е действие - виж validateTelegramInitData_ в Code.gs.
-  function showLockDebug_(text) {
-    var box = document.getElementById('lockDebugBox');
-    var btn = document.getElementById('lockCopyBtn');
-    box.value = text;
-    box.style.display = 'block';
-    btn.style.display = 'inline-block';
-  }
+  var code = generateUniqueRewardCode();
+  var sheet = getRewardsSheet_();
+  var now = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd.MM.yyyy HH:mm');
+  sheet.appendRow([code, type, value, name || '', email || '', orderId, now, false, '', '']);
 
-  async function init() {
-    if (!tg || !TG_INIT_DATA) {
-      document.getElementById('lockSub').textContent = 'Тази страница работи само отворена през Telegram бота (бутон "Отвори админ").';
+  if (email) sendRewardEmail(email, name, code, type, value);
+
+  return { code: code, type: type, value: value };
+}
+
+function sendRewardEmail(email, name, code, type, value) {
+  var isCase = type === 'case';
+  // Забележка: emoji извън BMP (напр. 🎁) в Subject-а на имейл понякога се
+  // повреждат до "???" при някои пощенски сървъри/клиенти. Затова в Subject-а
+  // ползваме безопасен символ (★), а 🎁 остава само в тялото на писмото.
+  var subject = isCase ? '★ Печелиш безплатен силиконов кейс!' : '★ Печелиш промокод за -' + value + '%!';
+  var rewardLine = isCase
+    ? 'При следващата си поръчка въведи кода по-долу в полето за промокод, за да получиш <strong style="color:' + TEXT_DARK + ';">безплатен силиконов кейс</strong>.'
+    : 'При следващата си поръчка въведи кода по-долу в полето за промокод за <strong style="color:' + TEXT_DARK + ';">' + value + '% отстъпка</strong>.';
+
+  var htmlBody =
+    '<div style="background:' + PAGE_BG + ';padding:32px 16px;">' +
+    '<div style="font-family:Georgia,serif;max-width:540px;margin:0 auto;background:' + CARD_BG + ';color:' + TEXT_DARK + ';padding:40px 34px;border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,0.06);">' +
+      '<h1 style="font-size:1.5rem;font-weight:400;color:' + TEXT_DARK + ';margin-bottom:0.5rem;">' + STORE_NAME + '</h1>' +
+      '<p style="color:' + TEXT_MUTED + ';font-size:0.75rem;margin-bottom:2rem;letter-spacing:0.1em;text-transform:uppercase;">Благодарим за ревюто!</p>' +
+      '<p style="color:' + TEXT_DARK + ';font-size:1rem;line-height:1.7;margin-bottom:1.5rem;">Здравей, <strong>' + escapeHtml(name || '') + '</strong>!</p>' +
+      '<p style="color:' + TEXT_MUTED + ';font-size:0.85rem;line-height:1.7;margin-bottom:1.5rem;">' + rewardLine + '</p>' +
+      '<div style="background:' + BOX_BG + ';border:1px dashed ' + ACCENT + ';border-radius:10px;padding:20px;text-align:center;margin-bottom:1.5rem;">' +
+        '<p style="font-size:0.65rem;letter-spacing:0.15em;text-transform:uppercase;color:' + TEXT_MUTED + ';margin-bottom:8px;">Твоят код</p>' +
+        '<p style="font-family:monospace;font-size:1.6rem;letter-spacing:0.15em;color:' + ACCENT + ';font-weight:700;">' + code + '</p>' +
+      '</div>' +
+      '<p style="color:' + TEXT_MUTED + ';font-size:0.7rem;">Кодът е уникален за теб и важи само за 1 (една) поръчка.</p>' +
+      '<p style="color:' + TEXT_MUTED + ';font-size:0.65rem;margin-top:1.5rem;">© ' + STORE_NAME + '</p>' +
+    '</div>' +
+    '</div>';
+
+  MailApp.sendEmail({ to: email, subject: subject, body: 'Твоят код: ' + code, htmlBody: htmlBody, name: STORE_NAME });
+}
+
+// Проверка на код (без да го консумира) - ползва се от checkout полето "Промокод".
+function verifyPromoCode(params) {
+  var code = String(params.code || '').trim().toUpperCase();
+  if (!code) return { valid: false, message: 'Липсва код' };
+  var sheet = getRewardsSheet_();
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]).toUpperCase() === code) {
+      var used = rows[i][7] === true || rows[i][7] === 'TRUE';
+      if (used) return { valid: false, message: 'Този код вече е използван.' };
+      return { valid: true, type: rows[i][1], value: rows[i][2] };
+    }
+  }
+  return { valid: false, message: 'Невалиден код.' };
+}
+
+// Реално "изразходва" кода (проверява + връща данните му) - вика се от
+// placeOrderInternal_. Заключва скрипта за момент, за да не могат две почти
+// едновременни поръчки да използват един и същ код два пъти (double-spend защита).
+function redeemPromoCode_(code) {
+  if (!code) return { applied: false };
+  var lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000);
+  } catch (e) {
+    return { applied: false, message: 'Системата е заета, опитай пак.' };
+  }
+  try {
+    var sheet = getRewardsSheet_();
+    var rows = sheet.getDataRange().getValues();
+    for (var i = 1; i < rows.length; i++) {
+      if (String(rows[i][0]).toUpperCase() === code) {
+        var used = rows[i][7] === true || rows[i][7] === 'TRUE';
+        if (used) return { applied: false, message: 'Кодът вече е използван.' };
+        // Веднага маркираме като използван (докато държим заключването), за да
+        // не може паралелна заявка да прочете същия ред като все още свободен.
+        sheet.getRange(i + 1, 8).setValue(true);
+        return { applied: true, code: code, type: rows[i][1], value: rows[i][2], _row: i + 1 };
+      }
+    }
+    return { applied: false, message: 'Невалиден код.' };
+  } finally {
+    lock.releaseLock();
+  }
+}
+
+// Забележка: колона 8 (Used) вече е сложена на true вътре в redeemPromoCode_
+// (докато държи заключването) - тук само довършваме с кой orderId/кога е ползван.
+function markPromoUsed_(code, orderId) {
+  var sheet = getRewardsSheet_();
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]).toUpperCase() === code) {
+      sheet.getRange(i + 1, 8).setValue(true);
+      sheet.getRange(i + 1, 9).setValue(orderId);
+      sheet.getRange(i + 1, 10).setValue(Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'dd.MM.yyyy HH:mm'));
       return;
     }
-    await loadScriptUrl();
-    // Пробна заявка - ако сървърът отхвърли tgInitData-та (не си ти), ще видим грешка тук.
-    try {
-      var res = await fetch(SCRIPT_URL + '?action=getOrders&tgInitData=' + encodeURIComponent(TG_INIT_DATA));
-      var data = await res.json();
-      if (data.error === 'Unauthorized (Telegram)') {
-        document.getElementById('lockSub').textContent = 'Нямаш достъп. Дебъг информация долу:';
-        showLockDebug_(JSON.stringify(data.debug || {}, null, 2));
-        return;
+  }
+}
+
+// Имейл на клиента по orderId (за да знаем накъде да пратим наградата).
+function getOrderEmail_(orderId) {
+  var sheet = getOrdersSheet_();
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][11]) === String(orderId)) return rows[i][4] || '';
+  }
+  return '';
+}
+
+// Защита - да не се дава втора награда, ако някой одобри едно и също ревю
+// два пъти (или го одобри, после случайно пак).
+function rewardAlreadyGiven_(orderId) {
+  var sheet = getRewardsSheet_();
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][5]) === String(orderId)) return true;
+  }
+  return false;
+}
+
+function approveReview(data) {
+  var sheet = getReviewsSheet_();
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (rows[i][0] === data.id) {
+      sheet.getRange(i + 1, 7).setValue(true);
+
+      // ─── Награда - генерира се и се праща ТОЧНО ТУК, при одобрение ───
+      var orderId = rows[i][1];
+      var name = rows[i][2];
+      var reward = null;
+      if (orderId && !rewardAlreadyGiven_(orderId)) {
+        var email = getOrderEmail_(orderId);
+        reward = createReviewReward(orderId, name, email);
       }
-    } catch (e) {
-      document.getElementById('lockSub').textContent = 'Грешка при връзка. Дебъг информация долу:';
-      showLockDebug_('FETCH ERROR: ' + (e && e.message ? e.message : String(e)));
-      return;
+      return { success: true, reward: reward };
     }
-    document.getElementById('lockScreen').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
-    loadOrders();
+  }
+  return { success: false };
+}
+
+function deleteReview(data) {
+  var sheet = getReviewsSheet_();
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (rows[i][0] === data.id) {
+      sheet.deleteRow(i + 1);
+      return { success: true };
+    }
+  }
+  return { success: false };
+}
+
+function sendReviewInvite(data) {
+  var email = data.email;
+  var orderId = data.orderId;
+  var name = data.name || '';
+  // siteUrl се подава от admin панела (полето "Домейн на сайта" в Настройки,
+  // ако е зададено) - иначе се пада на SITE_URL константата по-горе.
+  var siteUrl = data.siteUrl || SITE_URL;
+
+  if (!email) return { success: false, message: 'Няма имейл' };
+  if (!orderId) return { success: false, message: 'Няма orderId' };
+
+  var token = Utilities.getUuid();
+  var sheet = getOrdersSheet_();
+  var rows = sheet.getDataRange().getValues();
+  var foundRow = -1;
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][11]) === String(orderId)) {
+      foundRow = i;
+      break;
+    }
   }
 
-  init();
-</script>
-</body>
-</html>
+  if (foundRow !== -1) {
+    sheet.getRange(foundRow + 1, 15).setValue('invited'); // col 15 = reviewStatus
+    sheet.getRange(foundRow + 1, 16).setValue(token);      // col 16 = reviewToken
+  }
+
+  var reviewUrl = siteUrl + 'review.html?token=' + token + '&order=' + orderId;
+
+  var htmlBody =
+    '<div style="background:' + PAGE_BG + ';padding:32px 16px;">' +
+    '<div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;background:' + CARD_BG + ';color:' + TEXT_DARK + ';padding:40px 34px;border-radius:14px;box-shadow:0 1px 3px rgba(0,0,0,0.06);">' +
+      '<div style="text-align:center;margin-bottom:2rem;">' +
+        '<h1 style="font-size:1.6rem;font-weight:400;color:' + TEXT_DARK + ';margin:0;">' + STORE_NAME + '</h1>' +
+        '<p style="color:' + ACCENT + ';font-size:0.7rem;letter-spacing:0.2em;text-transform:uppercase;margin-top:6px;">Покана за ревю</p>' +
+      '</div>' +
+      '<p style="color:' + TEXT_DARK + ';font-size:1rem;line-height:1.7;margin-bottom:1.2rem;">Здравей, <strong>' + escapeHtml(name) + '</strong>!</p>' +
+      '<p style="color:' + TEXT_MUTED + ';font-size:0.85rem;line-height:1.7;margin-bottom:1.2rem;">Благодарим ти за поръчката! Ще се радваме да чуем мнението ти за продукта.</p>' +
+      '<div style="background:' + ACCENT_BG + ';border:1px solid ' + BORDER + ';border-radius:10px;padding:14px 18px;margin-bottom:1.8rem;">' +
+        '<p style="color:' + ACCENT + ';font-size:0.68rem;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:6px;">🎁 Специално за теб</p>' +
+        '<p style="color:' + TEXT_DARK + ';font-size:0.8rem;line-height:1.6;">Остави ревю и ще получиш подарък при следващата си поръчка — на случаен принцип безплатен силиконов кейс или промокод с отстъпка.</p>' +
+      '</div>' +
+      '<div style="text-align:center;margin-bottom:1.6rem;">' +
+        '<a href="' + reviewUrl + '" style="display:inline-block;background:' + ACCENT + ';color:#fff;padding:14px 28px;text-decoration:none;font-size:0.82rem;letter-spacing:0.08em;text-transform:uppercase;font-weight:600;border-radius:8px;">Остави ревю →</a>' +
+      '</div>' +
+      '<p style="color:' + TEXT_MUTED + ';font-size:0.72rem;text-align:center;margin-bottom:1.6rem;">Линкът е валиден само за теб.</p>' +
+      '<div style="background:' + BOX_BG + ';border:1px solid ' + BORDER + ';padding:16px 18px;border-radius:10px;">' +
+        '<p style="font-size:0.62rem;letter-spacing:0.12em;text-transform:uppercase;color:' + TEXT_MUTED + ';margin-bottom:6px;">Ако бутонът не се отваря</p>' +
+        '<p style="color:' + TEXT_MUTED + ';font-size:0.75rem;line-height:1.6;">Отвори ' + siteUrl + 'reviews.html и постави ръчно кода си:</p>' +
+        '<p style="font-family:monospace;font-size:0.9rem;letter-spacing:0.03em;color:' + ACCENT + ';margin-top:6px;word-break:break-all;">' + token + '</p>' +
+      '</div>' +
+      '<p style="color:' + TEXT_MUTED + ';font-size:0.66rem;margin-top:1.6rem;">© ' + STORE_NAME + '</p>' +
+    '</div>' +
+    '</div>';
+
+  MailApp.sendEmail({
+    to: email,
+    subject: '⭐ Остави ревю за поръчката си от ZenAirpods',
+    body: 'Кликни тук: ' + reviewUrl,
+    htmlBody: htmlBody,
+    name: STORE_NAME
+  });
+
+  return { success: true };
+}
+
+function verifyReviewToken(data) {
+  var sheet = getOrdersSheet_();
+  var rows = sheet.getDataRange().getValues();
+  if (!data.token) return { valid: false, message: 'Липсва код.' };
+  var hasOrder = data.order !== undefined && data.order !== null && data.order !== '';
+  for (var i = 1; i < rows.length; i++) {
+    var orderId = String(rows[i][11] || '');
+    var reviewToken = String(rows[i][15] || '');
+    var reviewStatus = String(rows[i][14] || '');
+    if (reviewToken && reviewToken === String(data.token) && (!hasOrder || orderId === String(data.order))) {
+      if (reviewStatus === 'reviewed') return { valid: false, message: 'Вече си оставил ревю. Благодарим!' };
+      return { valid: true, orderId: orderId, order: { name: rows[i][2] } };
+    }
+  }
+  return { valid: false, message: 'Невалиден или изтекъл линк' };
+}
+
+// ── НЕКОРЕКТЕН.КОМ ПРОВЕРКА ────────────────────────────
+// Изисква API ключ от https://nekorekten.com (профил → API Keys), сложен
+// в Script Properties (Project Settings → Script Properties) под името
+// NEKOREKTEN_API_KEY. Кодът НИКОГА не съдържа ключа директно.
+//
+// Потвърден реален формат на отговора (тестван на живо на 22.09.2026):
+// { "message": null, "items": [...], "count": 0, "currentPage": 1, "itemsPerPage": 20, "server": {...} }
+// "count" е ОБЩИЯТ брой репорти (не само тези на текущата страница от 20),
+// затова него ползваме за броя, а "items" само ако count липсва по някаква причина.
+function checkNekorekten_(phone) {
+  var apiKey = PropertiesService.getScriptProperties().getProperty('NEKOREKTEN_API_KEY');
+  if (!apiKey) return { checked: false, reason: 'Няма зададен API ключ (NEKOREKTEN_API_KEY)' };
+  if (!phone) return { checked: false, reason: 'Няма телефонен номер' };
+
+  try {
+    var url = 'https://api.nekorekten.com/api/v1/reports?phone=' + encodeURIComponent(phone);
+    var res = UrlFetchApp.fetch(url, {
+      method: 'get',
+      headers: { 'Api-Key': apiKey },
+      muteHttpExceptions: true
+    });
+    var code = res.getResponseCode();
+    var raw = res.getContentText();
+    Logger.log('nekorekten.com отговор (код ' + code + ') за телефон ' + phone + ': ' + raw);
+
+    if (code !== 200) {
+      return { checked: false, reason: 'HTTP ' + code + ' от nekorekten.com' };
+    }
+
+    var parsed = JSON.parse(raw);
+    var items = Array.isArray(parsed) ? parsed : (parsed.items || parsed.data || parsed.reports || []);
+    var count = (typeof parsed.count === 'number') ? parsed.count : items.length;
+
+    return { checked: true, count: count, reports: items };
+  } catch (e) {
+    Logger.log('nekorekten.com грешка: ' + e.toString());
+    return { checked: false, reason: e.toString() };
+  }
+}
+
+// Ръчна тестова функция - изпълни я от Apps Script редактора (Run →
+// testCheckNekorekten), за да видиш в логовете (View → Logs) какво реално
+// връща API-то, преди да разчиташ на автоматичните проверки при поръчки.
+function testCheckNekorekten() {
+  var result = checkNekorekten_('0888123456'); // смени с реален тестов номер
+  Logger.log(JSON.stringify(result, null, 2));
+}
+
+// ── TELEGRAM BOT + MINI APP (само за собственика) ────────
+// Настройка (виж пълните инструкции, изпратени отделно):
+//  1) Създай бот през @BotFather в Telegram -> вземи токена.
+//  2) Script Properties (⚙️ Project Settings) -> добави TELEGRAM_BOT_TOKEN.
+//  3) Публикувай telegram-admin.html в GitHub repo-то (GitHub Pages).
+//  4) Пусни setTelegramWebhook_() веднъж от редактора (Run) - слага webhook-а
+//     И бутона "🔧 Админ" до полето за писане в бота.
+//  5) Пиши /start на бота -> той ще ти каже твоя chat ID.
+//  6) Сложи го в Script Properties като TELEGRAM_CHAT_ID -> ботът/мини
+//     приложението се заключват само за теб.
+//  7) (По избор) GITHUB_PAT в Script Properties, за да могат одобрените от
+//     Mini App-а ревюта да се показват мигновено на сайта (виж syncReviewToGitHub_).
+//
+// Адресът на мини приложението - смени го, ако публикуваш telegram-admin.html
+// на друго място от останалите статични файлове на сайта.
+const TELEGRAM_MINI_APP_URL = SITE_URL + 'tele.html';
+
+function getTelegramConfig_() {
+  var props = PropertiesService.getScriptProperties();
+  var token = props.getProperty('TELEGRAM_BOT_TOKEN');
+  var chatId = props.getProperty('TELEGRAM_CHAT_ID');
+  return {
+    token: token ? token.trim() : token,
+    chatId: chatId ? chatId.trim() : chatId
+  };
+}
+
+function tgApi_(method, payload) {
+  var cfg = getTelegramConfig_();
+  if (!cfg.token) return null;
+  var url = 'https://api.telegram.org/bot' + cfg.token + '/' + method;
+  var res = UrlFetchApp.fetch(url, {
+    method: 'post',
+    contentType: 'application/json',
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  });
+  try { return JSON.parse(res.getContentText()); } catch (e) { return null; }
+}
+
+function tgSend_(chatId, text, extra) {
+  var payload = Object.assign({ chat_id: chatId, text: text, parse_mode: 'HTML' }, extra || {});
+  return tgApi_('sendMessage', payload);
+}
+
+function tgAnswerCallback_(callbackQueryId, text) {
+  tgApi_('answerCallbackQuery', { callback_query_id: callbackQueryId, text: text || '' });
+}
+
+function tgEditMessageText_(chatId, messageId, text) {
+  return tgApi_('editMessageText', { chat_id: chatId, message_id: messageId, text: text, parse_mode: 'HTML' });
+}
+
+// Извиква се веднъж, ръчно от Apps Script редактора (Run -> setTelegramWebhook_),
+// за да "закачи" бота към този Web App deployment И да сложи бутона "🔧 Админ"
+// (menu button) до полето за писане, който отваря Mini App-а директно.
+function setTelegramWebhook_() {
+  var webAppUrl = 'https://script.google.com/macros/s/AKfycbzKj9ttuvCMJFF3DJuPBry15BuiLkWzLku2NwDDbtZS7oZ5jgHtQp1jl2d9bertHYYn/exec';
+  var webhookResult = tgApi_('setWebhook', { url: webAppUrl });
+  Logger.log('setWebhook: ' + JSON.stringify(webhookResult));
+
+  var menuResult = tgApi_('setChatMenuButton', {
+    menu_button: { type: 'web_app', text: '🔧 Админ', web_app: { url: TELEGRAM_MINI_APP_URL } }
+  });
+  Logger.log('setChatMenuButton: ' + JSON.stringify(menuResult));
+}
+
+function handleTelegramUpdate_(update) {
+  var cfg = getTelegramConfig_();
+
+  if (update.message) {
+    var msg = update.message;
+    var chatId = String(msg.chat && msg.chat.id);
+
+    if (!cfg.chatId) {
+      // TELEGRAM_CHAT_ID още не е зададен - показваме chat ID-то, за да може
+      // собственикът да го копира в Script Properties. Никой друг не може да
+      // "заключи" бота към себе си, защото Script Properties се задават само
+      // от теб в Apps Script редактора.
+      tgSend_(chatId, '👋 Здравей! Твоят chat ID е:\n<code>' + chatId + '</code>\n\nСложи го в Script Properties като <b>TELEGRAM_CHAT_ID</b>, за да заключиш бота само за себе си. След това пиши /start отново.');
+      return;
+    }
+    if (chatId !== String(cfg.chatId)) {
+      tgSend_(chatId, '⛔ Този бот е частен и не е за теб.');
+      return;
+    }
+    handleTelegramMessage_(chatId, msg);
+    return;
+  }
+
+}
+
+// Отваря Mini App-а - единственият начин за управление от Telegram сега
+// (виж telegram-admin.html). "web_app" бутон под съобщението отваря страницата
+// вътре в Telegram, с автоматична идентификация (без парола).
+function handleTelegramMessage_(chatId, msg) {
+  var text = (msg.text || '').trim();
+
+  if (text === '/start' || text === '/help' || text === '/app') {
+    tgSend_(chatId, '👋 Здравей! Аз съм частният админ бот на ' + STORE_NAME + '.\n\nНатисни бутона по-долу (или "🔧 Админ" до полето за писане), за да отвориш поръчките и ревютата.', {
+      reply_markup: {
+        inline_keyboard: [[ { text: '🔧 Отвори админ', web_app: { url: TELEGRAM_MINI_APP_URL } } ]]
+      }
+    });
+    return;
+  }
+  tgSend_(chatId, 'Пиши /app, за да отвориш админ панела.');
+}
+
+function findReviewById_(id) {
+  var sheet = getReviewsSheet_();
+  var rows = sheet.getDataRange().getValues();
+  for (var i = 1; i < rows.length; i++) {
+    if (String(rows[i][0]) === String(id)) {
+      return { id: rows[i][0], orderId: rows[i][1], name: rows[i][2], text: rows[i][3], rating: rows[i][4], date: rows[i][5] };
+    }
+  }
+  return null;
+}
+
+// ── TELEGRAM ⇄ GITHUB (кеш на одобрени ревюта в products.json) ──────────
+// Огледален на кеширащата логика в admin.html (cacheClientReviewInSettings_),
+// но изпълнен от Apps Script, тъй като Telegram ботът няма достъп до
+// браузъра/localStorage на admin панела. Изисква Script Property GITHUB_PAT
+// (Personal Access Token с "repo" права) - ако липсва, одобрението/изтриването
+// пак минава успешно (Sheets се обновява, имейлът за награда се праща), само
+// кешът в products.json няма да се обнови автоматично - ще се обнови следващия
+// път, когато запазиш нещо от admin панела.
+// ── TELEGRAM: ВАЛИДАЦИЯ НА MINI APP ДАННИТЕ ──────────────
+// Официалният алгоритъм на Telegram за проверка на initData (виж
+// core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app):
+// secret_key = HMAC_SHA256(data=bot_token, key="WebAppData")
+// hash        = HMAC_SHA256(data=data_check_string, key=secret_key) -> hex
+// Ако изчисленият hash съвпада с подадения "hash" параметър, данните са
+// автентично издадени от Telegram (никой друг не знае бот токена, за да ги
+// подправи) - и допълнително проверяваме, че потребителят вътре е точно
+// собственикът (TELEGRAM_CHAT_ID), а не произволен човек, отворил линка.
+function validateTelegramInitData_(initData) {
+  try {
+    var cfg = getTelegramConfig_();
+    if (!cfg.token || !cfg.chatId || !initData) {
+      return { valid: false, debug: { reason: 'missing_token_or_chatid_or_initdata', hasToken: !!cfg.token, hasChatId: !!cfg.chatId, hasInitData: !!initData } };
+    }
+
+    var pairs = String(initData).split('&');
+    var hash = '';
+    var fields = [];
+    var userId = '';
+    pairs.forEach(function(pair) {
+      var eq = pair.indexOf('=');
+      if (eq === -1) return;
+      var key = pair.substring(0, eq);
+      var value = decodeURIComponent(pair.substring(eq + 1));
+      if (key === 'hash') { hash = value; return; }
+      fields.push(key + '=' + value);
+      if (key === 'user') {
+        try { userId = String(JSON.parse(value).id); } catch (e2) {}
+      }
+    });
+    if (!hash) return { valid: false, debug: { reason: 'no_hash_field' } };
+    fields.sort();
+    var dataCheckString = fields.join('\n');
+
+    var secretKeyBytes;
+    try {
+      secretKeyBytes = Utilities.computeHmacSignature(Utilities.MacAlgorithm.HMAC_SHA_256, cfg.token, 'WebAppData');
+    } catch (e1) {
+      return { valid: false, debug: { reason: 'step1_secretkey_failed', message: String(e1) } };
+    }
+
+    // Utilities.computeHmacSignature корумпира байтове >127, когато key-ят
+    // (secretKeyBytes, суров рандом byte array) се подаде като String
+    // (заради вътрешно UTF-8 прекодиране). Затова втората HMAC стъпка е
+    // имплементирана ръчно, изцяло с byte arrays, без да минава през String key.
+    var messageBytes = Utilities.newBlob(dataCheckString).getBytes();
+    var computedBytes;
+    try {
+      computedBytes = hmacSha256Bytes_(secretKeyBytes, messageBytes);
+    } catch (e2b) {
+      return { valid: false, debug: { reason: 'step2_computedbytes_failed', message: String(e2b) } };
+    }
+
+    var computedHex = bytesToHex_(computedBytes);
+
+    var hashMatch = (computedHex === hash);
+    var idMatch = (userId === String(cfg.chatId));
+
+    if (!hashMatch) {
+      var t = cfg.token || '';
+      var tokenPreview = t.length > 10 ? (t.slice(0, 6) + '...' + t.slice(-4)) : '(too short)';
+      return { valid: false, debug: { reason: 'hash_mismatch', computedHex: computedHex, receivedHash: hash, tokenLen: t.length, tokenPreview: tokenPreview, dataCheckString: dataCheckString } };
+    }
+    if (!userId || !idMatch) return { valid: false, debug: { reason: 'chatid_mismatch', userId: userId, cfgChatId: String(cfg.chatId) } };
+    return { valid: true, userId: userId };
+  } catch (e) {
+    return { valid: false, debug: { reason: 'exception', message: String(e) } };
+  }
+}
+
+function bytesToHex_(bytes) {
+  return bytes.map(function(b) {
+    var v = b < 0 ? b + 256 : b;
+    var h = v.toString(16);
+    return h.length === 1 ? '0' + h : h;
+  }).join('');
+}
+
+function bytesToBinaryString_(bytes) {
+  return bytes.map(function(b) {
+    var v = b < 0 ? b + 256 : b;
+    return String.fromCharCode(v);
+  }).join('');
+}
+
+// Ръчна HMAC-SHA256 реализация чрез computeDigest, изцяло с byte arrays -
+// заобикаля бъга на computeHmacSignature с String key за суров byte key.
+function hmacSha256Bytes_(keyBytes, messageBytes) {
+  var blockSize = 64; // SHA-256 block size в байтове
+
+  var key = keyBytes.slice();
+  if (key.length > blockSize) {
+    key = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, key);
+  }
+  while (key.length < blockSize) key.push(0);
+
+  var oKeyPad = [];
+  var iKeyPad = [];
+  for (var i = 0; i < blockSize; i++) {
+    var v = key[i] < 0 ? key[i] + 256 : key[i];
+    var o = v ^ 0x5c;
+    var ip = v ^ 0x36;
+    oKeyPad.push(o > 127 ? o - 256 : o);
+    iKeyPad.push(ip > 127 ? ip - 256 : ip);
+  }
+
+  var innerInput = iKeyPad.concat(messageBytes);
+  var innerHash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, innerInput);
+
+  var outerInput = oKeyPad.concat(innerHash);
+  var outerHash = Utilities.computeDigest(Utilities.DigestAlgorithm.SHA_256, outerInput);
+
+  return outerHash;
+}
+
+function githubGetProductsJson_() {
+  var pat = PropertiesService.getScriptProperties().getProperty('GITHUB_PAT');
+  if (!pat) return null;
+  var url = 'https://api.github.com/repos/' + SITE_REPO + '/contents/products.json';
+  var res = UrlFetchApp.fetch(url, {
+    headers: { 'Authorization': 'token ' + pat, 'Accept': 'application/vnd.github.v3+json' },
+    muteHttpExceptions: true
+  });
+  if (res.getResponseCode() !== 200) return null;
+  var data = JSON.parse(res.getContentText());
+  var decoded = Utilities.newBlob(Utilities.base64Decode(String(data.content).replace(/\n/g, ''))).getDataAsString('UTF-8');
+  try {
+    return { content: JSON.parse(decoded), sha: data.sha };
+  } catch (e) {
+    return null;
+  }
+}
+
+function githubSaveProductsJson_(content, sha) {
+  var pat = PropertiesService.getScriptProperties().getProperty('GITHUB_PAT');
+  if (!pat) return { ok: false, message: 'Няма зададен GITHUB_PAT в Script Properties' };
+  var url = 'https://api.github.com/repos/' + SITE_REPO + '/contents/products.json';
+  var body = {
+    message: 'Update reviews via Telegram bot',
+    content: Utilities.base64Encode(JSON.stringify(content, null, 2), Utilities.Charset.UTF_8),
+    sha: sha
+  };
+  var res = UrlFetchApp.fetch(url, {
+    method: 'put',
+    contentType: 'application/json',
+    headers: { 'Authorization': 'token ' + pat },
+    payload: JSON.stringify(body),
+    muteHttpExceptions: true
+  });
+  var code = res.getResponseCode();
+  if (code !== 200 && code !== 201) return { ok: false, message: 'GitHub HTTP ' + code };
+  return { ok: true };
+}
+
+function syncReviewToGitHub_(review, remove) {
+  var current = githubGetProductsJson_();
+  if (!current) return { ok: false, message: 'Няма GITHUB_PAT или неуспешно четене на products.json' };
+
+  var settings = current.content.settings || {};
+  var list = settings.clientReviews || [];
+  var idx = -1;
+  for (var i = 0; i < list.length; i++) {
+    if (String(list[i].id) === String(review.id)) { idx = i; break; }
+  }
+  if (remove) {
+    if (idx !== -1) list.splice(idx, 1);
+  } else {
+    var cached = { id: review.id, text: review.text || '', name: review.name || '', date: review.date || '', rating: review.rating || 5 };
+    if (idx !== -1) list[idx] = cached; else list.push(cached);
+  }
+  settings.clientReviews = list;
+  current.content.settings = settings;
+  return githubSaveProductsJson_(current.content, current.sha);
+}
+
+// ── HELPERS ───────────────────────────────────────────
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
