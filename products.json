@@ -97,7 +97,7 @@
     "showManualReviews": true,
     "showClientReviews": true,
     "rewardDiscountChance": 0,
-    "rewardDiscountPercent": 10,
+    "rewardDiscountPercent": 5,
     "clientReviews": [],
     "manualReviews": [
       {
