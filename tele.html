@@ -272,7 +272,11 @@
     return String(s || '').replace(/'/g, "\\'").replace(/</g, '&lt;').replace(/>/g, '&gt;');
   }
 
-  //
+  // ─── AUTH (Telegram WebApp initData) ───
+  // Не пазим локална парола - самото Telegram initData (подписано от Telegram
+  // със секретния токен на бота) доказва кой е човекът. Сървърът (Code.gs)
+  // проверява подписа И че user id-то съвпада с TELEGRAM_CHAT_ID, преди да
+  // изпълни каквото и да е действие - виж validateTelegramInitData_ в Code.gs.
   async function init() {
     if (!tg || !TG_INIT_DATA) {
       document.getElementById('lockSub').textContent = 'Тази страница работи само отворена през Telegram бота (бутон "Отвори админ").';
@@ -284,11 +288,11 @@
       var res = await fetch(SCRIPT_URL + '?action=getOrders&tgInitData=' + encodeURIComponent(TG_INIT_DATA));
       var data = await res.json();
       if (data.error === 'Unauthorized (Telegram)') {
-        document.getElementById('lockSub').textContent = 'Нямаш достъп до този панел.';
+        document.getElementById('lockSub').textContent = 'ДЕБЪГ: ' + JSON.stringify(data.debug || {});
         return;
       }
-  } catch (e) {
-      document.getElementById('lockSub').textContent = 'ДЕБЪГ: ' + (e && e.message ? e.message : String(e));
+    } catch (e) {
+      document.getElementById('lockSub').textContent = 'ДЕБЪГ FETCH ERROR: ' + (e && e.message ? e.message : String(e));
       return;
     }
     document.getElementById('lockScreen').style.display = 'none';
