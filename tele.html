@@ -65,6 +65,8 @@
     <div class="lock-icon">🔒</div>
     <div class="lock-title">Проверка на достъпа...</div>
     <div class="lock-sub" id="lockSub">Изчакай момент.</div>
+    <textarea id="lockDebugBox" readonly style="display:none;width:100%;max-width:560px;height:220px;margin-top:14px;background:#111;color:#9ad;border:1px solid #333;border-radius:8px;padding:10px;font-size:11px;font-family:monospace;" onclick="this.select();"></textarea>
+    <button type="button" id="lockCopyBtn" style="display:none;margin-top:8px;padding:8px 14px;border-radius:8px;border:1px solid #444;background:#1a1a1a;color:#ddd;font-size:13px;" onclick="var b=document.getElementById('lockDebugBox');b.select();b.setSelectionRange(0,999999);document.execCommand('copy');this.textContent='Копирано ✓';">Копирай дебъг текста</button>
   </div>
 </div>
 
@@ -277,6 +279,14 @@
   // със секретния токен на бота) доказва кой е човекът. Сървърът (Code.gs)
   // проверява подписа И че user id-то съвпада с TELEGRAM_CHAT_ID, преди да
   // изпълни каквото и да е действие - виж validateTelegramInitData_ в Code.gs.
+  function showLockDebug_(text) {
+    var box = document.getElementById('lockDebugBox');
+    var btn = document.getElementById('lockCopyBtn');
+    box.value = text;
+    box.style.display = 'block';
+    btn.style.display = 'inline-block';
+  }
+
   async function init() {
     if (!tg || !TG_INIT_DATA) {
       document.getElementById('lockSub').textContent = 'Тази страница работи само отворена през Telegram бота (бутон "Отвори админ").';
@@ -288,11 +298,13 @@
       var res = await fetch(SCRIPT_URL + '?action=getOrders&tgInitData=' + encodeURIComponent(TG_INIT_DATA));
       var data = await res.json();
       if (data.error === 'Unauthorized (Telegram)') {
-        document.getElementById('lockSub').textContent = 'ДЕБЪГ: ' + JSON.stringify(data.debug || {});
+        document.getElementById('lockSub').textContent = 'Нямаш достъп. Дебъг информация долу:';
+        showLockDebug_(JSON.stringify(data.debug || {}, null, 2));
         return;
       }
     } catch (e) {
-      document.getElementById('lockSub').textContent = 'ДЕБЪГ FETCH ERROR: ' + (e && e.message ? e.message : String(e));
+      document.getElementById('lockSub').textContent = 'Грешка при връзка. Дебъг информация долу:';
+      showLockDebug_('FETCH ERROR: ' + (e && e.message ? e.message : String(e)));
       return;
     }
     document.getElementById('lockScreen').style.display = 'none';
