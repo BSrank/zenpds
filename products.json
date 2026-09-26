@@ -98,7 +98,15 @@
     "showClientReviews": true,
     "rewardDiscountChance": 0,
     "rewardDiscountPercent": 5,
-    "clientReviews": [],
+    "clientReviews": [
+      {
+        "id": "rev_1790375045781",
+        "text": "Много благодарим, детето е много доволно",
+        "name": "Крисия",
+        "date": "26.09.2026",
+        "rating": 5
+      }
+    ],
     "manualReviews": [
       {
         "text": "Страхотни слушалки! Звукът е кристално чист и шумопотискането работи перфектно. Доставката беше светкавична. Препоръчвам!",
