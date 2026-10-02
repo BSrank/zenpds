@@ -85,22 +85,6 @@
         }
       ],
       "active": true
-    },
-    {
-      "id": "cable11",
-      "name": "Iphone Cable 16- 17 Pro / Pro MAX",
-      "price": 15,
-      "priceBgn": 0,
-      "comparePrice": 0,
-      "comparePriceBgn": 0,
-      "imageMain": "",
-      "imagePrefix": "charger16-17",
-      "previewFeatures": [
-        "Айфон кабел - 16-17"
-      ],
-      "sections": [],
-      "active": true,
-      "isNewListing": true
     }
   ],
   "settings": {
