@@ -22,11 +22,18 @@ async function loadSiteData() {
             const res = await fetch('products.json?t=' + Date.now());
             if (!res.ok) throw new Error('HTTP ' + res.status);
             const data = await res.json();
-            const products = (data.products || []).filter(p => p.active !== false);
+            const settings = data.settings || {};
+            // "Нови обяви" (isNewListing:true) са скрити от сайта, докато собственикът
+            // не включи settings.showNewListings от admin панела - позволява да се
+            // подготви продукт напълно (снимки, описание, цена), преди да е публичен.
+            const showNewListings = settings.showNewListings === true;
+            const products = (data.products || []).filter(function(p) {
+                return p.active !== false && (!p.isNewListing || showNewListings);
+            });
             if (!products.length) throw new Error('products.json е празен');
 
             SITE_PRODUCTS = products;
-            SITE_SETTINGS = data.settings || {};
+            SITE_SETTINGS = settings;
 
             // PRODUCT_IMAGES се строи динамично от products.json, вместо да е хардкоднато.
             PRODUCT_IMAGES = {};
