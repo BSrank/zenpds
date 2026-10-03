@@ -69,6 +69,16 @@
     .small-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
     .manual-review-item { border: 1px solid var(--border); border-radius: 8px; padding: 1rem; margin-bottom: 0.8rem; background: var(--surface2); }
     .manual-review-item .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.6rem; }
+    .product-edit-card { border: 1px solid var(--border); border-radius: 10px; padding: 1.2rem; margin-bottom: 1rem; background: var(--surface); }
+    .product-edit-card.new-listing { border-color: var(--accent); }
+    .product-edit-header { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .product-edit-header .product-name-cell { flex: 1; min-width: 160px; font-size: 1rem; }
+    .product-edit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; margin-bottom: 0.7rem; }
+    .product-edit-grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
+    .product-edit-card label.field-label { display: block; font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+    @media (max-width: 700px) {
+      .product-edit-grid, .product-edit-grid.cols-4 { grid-template-columns: 1fr 1fr; }
+    }
     .toast { position: fixed; bottom: 30px; right: 30px; background: var(--surface); border: 1px solid var(--border); padding: 12px 20px; border-radius: 8px; font-size: 0.85rem; z-index: 999; transform: translateY(20px); opacity: 0; transition: all 0.3s; pointer-events: none; }
     .toast.show { transform: translateY(0); opacity: 1; }
     .toast.success { border-color: var(--success); color: var(--success); }
@@ -121,19 +131,12 @@
         <button class="btn btn-ghost" onclick="loadData()">↻ Презареди</button>
         <button class="btn btn-primary" onclick="saveProducts()">💾 Запази промените</button>
       </div>
-      <div class="card">
-        <div class="product-row" style="border-bottom:1px solid var(--border);padding-bottom:0.6rem;">
-          <div class="product-row-label">Продукт</div>
-          <div class="product-row-label">Цена (€)</div>
-          <div class="product-row-label">"Оригинална" цена (€)</div>
-          <div class="product-row-label">Активен</div>
-          <div></div>
-        </div>
-        <div id="productsList"></div>
-      </div>
+      <div id="productsList"></div>
+      <button class="btn btn-ghost" style="margin-bottom:1.2rem;" onclick="addProduct()">+ Добави продукт</button>
       <p style="font-size:0.75rem;color:var(--muted);margin-top:0.5rem;">
-        💡 "Оригинална" цена е по-висока зачертана цена до истинската, за да изглежда продуктът намален/на промоция.
-        Остави я на 0, за да не се показва.
+        💡 "Оригинална" цена е по-висока зачертана цена до истинската, за да изглежда продуктът намален/на промоция. Остави я на 0, за да не се показва.<br>
+        💡 Снимките на продукта трябва да са качени в GitHub repo-то с имена <code>{префикс}.1.jpg</code>, <code>{префикс}.2.jpg</code>... (до 12), плюс главна снимка с отделно име — "Префикс на снимките" по-долу трябва да съвпада точно.<br>
+        💡 "Нова обява" продукти са напълно скрити от сайта, докато не включиш "Покажи новите продукти" от таб Настройки — можеш да подготвиш всичко спокойно преди да ги пуснеш.
       </p>
     </div>
 
@@ -170,6 +173,17 @@
       <div class="toolbar">
         <div class="toolbar-title">Настройки</div>
         <button class="btn btn-primary" onclick="saveProducts()">💾 Запази настройките</button>
+      </div>
+
+      <div class="card">
+        <h3 style="font-family:'DM Serif Display',serif;font-weight:400;font-size:1.1rem;margin-bottom:1rem;">Нови обяви</h3>
+        <div class="toggle-row">
+          <div class="toggle-switch" id="toggle-newlistings" onclick="toggleSetting('showNewListings','toggle-newlistings')"></div>
+          <div>
+            <div class="toggle-row-label">Покажи новите продукти</div>
+            <div class="toggle-row-sub">Включи, когато си готов продуктите, маркирани като "Нова обява" (в таб Продукти) да станат видими на сайта</div>
+          </div>
+        </div>
       </div>
 
       <div class="card">
@@ -410,7 +424,30 @@
     }
   }
 
+  // Проверява продуктите преди запис - НЕ пускаме запис към GitHub (живия сайт),
+  // ако нещо е очевидно счупено (празно/дублирано ID, празно име), защото това
+  // веднага би счупило зареждането на products.json за всички посетители.
+  function validateProducts_() {
+    var seenIds = {};
+    for (var i = 0; i < products.length; i++) {
+      var p = products[i];
+      var name = (p.name || '').trim();
+      var id = (p.id || '').trim();
+      if (!name) return 'Продукт #' + (i + 1) + ' няма име.';
+      if (!id) return 'Продукт "' + name + '" няма ID (задължително, уникално, без интервали).';
+      if (/\s/.test(id)) return 'ID-то на "' + name + '" съдържа интервал(и) — използвай само букви/цифри/тире/долна черта.';
+      if (seenIds[id]) return 'Две продукта имат едно и също ID ("' + id + '") — трябва да е уникално за всеки продукт.';
+      seenIds[id] = true;
+    }
+    return null; // всичко е ОК
+  }
+
   async function saveProducts() {
+    var validationError = validateProducts_();
+    if (validationError) {
+      toast('Не е запазено — ' + validationError, 'error');
+      return;
+    }
     // Вземаме стойностите от Настройки формата преди запис (за случай, че сме
     // на таб "Настройки" при натискане на бутона).
     var domainInput = document.getElementById('settings-sitedomain');
@@ -454,22 +491,126 @@
   }
 
   // ─── PRODUCTS TAB ───
+  function esc_(s) {
+    return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // "Sections" (характеристики, групирани по заглавие) се редактират като прост
+  // текст вместо сложна вложена форма - по-бързо за писане, лесно за преглед:
+  //   ## Заглавие на секция
+  //   Точка едно (може <strong>HTML</strong>)
+  //   Точка две
+  //
+  //   ## Друга секция
+  //   ...
+  function sectionsToText_(sections) {
+    return (sections || []).map(function(s) {
+      return '## ' + (s.title || '') + '\n' + (s.items || []).join('\n');
+    }).join('\n\n');
+  }
+  function parseSectionsText_(text) {
+    var lines = String(text || '').split('\n');
+    var sections = [];
+    var current = null;
+    lines.forEach(function(line) {
+      var trimmed = line.trim();
+      if (!trimmed) return;
+      if (trimmed.indexOf('## ') === 0) {
+        current = { title: trimmed.slice(3).trim(), items: [] };
+        sections.push(current);
+      } else if (current) {
+        current.items.push(trimmed);
+      }
+    });
+    return sections;
+  }
+
   function renderProductsList() {
     var list = document.getElementById('productsList');
+    if (!products.length) {
+      list.innerHTML = '<p class="empty-note">Няма продукти. Натисни "+ Добави продукт" по-долу.</p>';
+      return;
+    }
     list.innerHTML = products.map(function(p, idx) {
-      return '<div class="product-row">' +
-        '<div class="product-name-cell">' + p.name + '</div>' +
-        '<input type="number" step="0.01" value="' + p.price + '" onchange="products[' + idx + '].price = parseFloat(this.value)||0;" />' +
-        '<input type="number" step="0.01" value="' + (p.comparePrice || 0) + '" onchange="products[' + idx + '].comparePrice = parseFloat(this.value)||0;" />' +
-        '<div class="toggle-switch ' + (p.active !== false ? 'on' : '') + '" onclick="toggleProductActive(' + idx + ', this)"></div>' +
-        '<span class="badge ' + (p.active !== false ? 'on' : 'off') + '">' + (p.active !== false ? 'активен' : 'скрит') + '</span>' +
+      var isNew = p.isNewListing === true;
+      return '<div class="product-edit-card' + (isNew ? ' new-listing' : '') + '">' +
+        '<div class="product-edit-header">' +
+          '<div class="product-name-cell">' + esc_(p.name || '(без име)') + (isNew ? ' <span class="badge" style="background:rgba(37,99,235,0.15);color:var(--accent);">нова обява</span>' : '') + '</div>' +
+          '<div class="toggle-row" style="padding:0;">' +
+            '<div class="toggle-switch ' + (p.active !== false ? 'on' : '') + '" onclick="toggleProductField(' + idx + ',\'active\',this)"></div>' +
+            '<span class="badge ' + (p.active !== false ? 'on' : 'off') + '">' + (p.active !== false ? 'активен' : 'скрит') + '</span>' +
+          '</div>' +
+          '<div class="toggle-row" style="padding:0;">' +
+            '<div class="toggle-switch ' + (isNew ? 'on' : '') + '" onclick="toggleProductField(' + idx + ',\'isNewListing\',this)"></div>' +
+            '<span class="badge" style="color:var(--muted);">нова обява</span>' +
+          '</div>' +
+          '<button class="small-btn danger" onclick="deleteProduct(' + idx + ')">🗑 Изтрий</button>' +
+        '</div>' +
+
+        '<div class="product-edit-grid">' +
+          '<div><label class="field-label">Име</label><input type="text" value="' + esc_(p.name) + '" onchange="products[' + idx + '].name = this.value; renderProductsList();" /></div>' +
+          '<div><label class="field-label">ID (уникално, без интервали)</label><input type="text" value="' + esc_(p.id) + '" onchange="products[' + idx + '].id = this.value.trim();" /></div>' +
+        '</div>' +
+
+        '<div class="product-edit-grid cols-4">' +
+          '<div><label class="field-label">Цена (€)</label><input type="number" step="0.01" value="' + (p.price||0) + '" onchange="products[' + idx + '].price = parseFloat(this.value)||0;" /></div>' +
+          '<div><label class="field-label">Цена (лв)</label><input type="number" step="1" value="' + (p.priceBgn||0) + '" onchange="products[' + idx + '].priceBgn = parseFloat(this.value)||0;" /></div>' +
+          '<div><label class="field-label">"Оригинална" цена (€)</label><input type="number" step="0.01" value="' + (p.comparePrice||0) + '" onchange="products[' + idx + '].comparePrice = parseFloat(this.value)||0;" /></div>' +
+          '<div><label class="field-label">"Оригинална" цена (лв)</label><input type="number" step="1" value="' + (p.comparePriceBgn||0) + '" onchange="products[' + idx + '].comparePriceBgn = parseFloat(this.value)||0;" /></div>' +
+        '</div>' +
+
+        '<div class="product-edit-grid">' +
+          '<div><label class="field-label">Префикс на снимките (напр. "charger")</label><input type="text" value="' + esc_(p.imagePrefix) + '" onchange="products[' + idx + '].imagePrefix = this.value.trim();" /></div>' +
+          '<div><label class="field-label">Файл на главната снимка</label><input type="text" value="' + esc_(p.imageMain) + '" onchange="products[' + idx + '].imageMain = this.value.trim();" /></div>' +
+        '</div>' +
+
+        '<div style="margin-bottom:0.7rem;">' +
+          '<label class="field-label">Кратки точки за преглед (по една на ред — показват се в картата на продукта)</label>' +
+          '<textarea rows="3" onchange="products[' + idx + '].previewFeatures = this.value.split(\'\\n\').map(function(s){return s.trim();}).filter(Boolean);">' + esc_((p.previewFeatures||[]).join('\n')) + '</textarea>' +
+        '</div>' +
+
+        '<div>' +
+          '<label class="field-label">Описание / характеристики (## Заглавие на секция, после точки на отделен ред всяка)</label>' +
+          '<textarea rows="6" onchange="products[' + idx + '].sections = parseSectionsText_(this.value);">' + esc_(sectionsToText_(p.sections)) + '</textarea>' +
+        '</div>' +
       '</div>';
     }).join('');
   }
 
-  function toggleProductActive(idx, el) {
-    products[idx].active = products[idx].active === false ? true : false;
-    el.classList.toggle('on', products[idx].active !== false);
+  function toggleProductField(idx, field, el) {
+    products[idx][field] = products[idx][field] === true ? false : true;
+    // за 'active' пазим конвенцията active!==false (undefined също се брои за активен)
+    if (field === 'active' && products[idx][field] === false) {
+      // изрично false - остава false
+    }
+    renderProductsList();
+  }
+
+  function addProduct() {
+    products.push({
+      id: '',
+      name: 'Нов продукт',
+      price: 0,
+      priceBgn: 0,
+      comparePrice: 0,
+      comparePriceBgn: 0,
+      imageMain: '',
+      imagePrefix: '',
+      previewFeatures: [],
+      sections: [],
+      active: true,
+      isNewListing: true
+    });
+    renderProductsList();
+    // скролваме до новодобавения продукт (последната карта), за удобство
+    var cards = document.querySelectorAll('.product-edit-card');
+    if (cards.length) cards[cards.length - 1].scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  function deleteProduct(idx) {
+    var p = products[idx];
+    if (!confirm('Сигурен ли си, че искаш да изтриеш "' + (p.name || 'този продукт') + '"? Това не изтрива снимките от GitHub, само записа тук.')) return;
+    products.splice(idx, 1);
     renderProductsList();
   }
 
@@ -481,6 +622,7 @@
     document.getElementById('contactModeLabel').textContent = siteSettings.contactMode === 'form' ? 'Контактна форма' : 'Телефон';
     document.getElementById('toggle-manualreviews').classList.toggle('on', siteSettings.showManualReviews === true);
     document.getElementById('toggle-clientreviews').classList.toggle('on', siteSettings.showClientReviews === true);
+    document.getElementById('toggle-newlistings').classList.toggle('on', siteSettings.showNewListings === true);
     renderManualReviewsList();
     var chanceEl = document.getElementById('settings-reward-chance');
     var percentEl = document.getElementById('settings-reward-percent');
