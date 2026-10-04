@@ -214,29 +214,29 @@
             if (order) extraLines.push('Поръчка №: ' + order);
             if (extraLines.length) msg = extraLines.join('\n') + '\n\n' + msgRaw;
 
+            // Показваме потвърждение на клиента ВЕДНАГА, без да чакаме бекенда —
+            // Apps Script може да отнеме няколко секунди (cold start), а при
+            // mode:'no-cors' браузърът и така не може да прочете отговора, така
+            // че чакането преди да покажем "изпратено" само бави usability-то
+            // без полза. Самата заявка продължава в основата, независимо от UI.
             btn.disabled = true;
-            btn.textContent = 'Изпращане...';
+            btn.textContent = 'Изпрати';
+            status.textContent = '✓ Съобщението е изпратено. Ще получиш отговор на посочения имейл.';
+            status.className = 'form-status success';
+            status.style.display = 'block';
+            document.getElementById('contactForm').reset();
+            setTimeout(function () { btn.disabled = false; }, 1500);
 
-            try {
-                await fetch(GOOGLE_SHEETS_CONFIG.webAppUrl, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'contactForm', name: name, email: email, msg: msg })
-                });
-                status.textContent = '✓ Съобщението е изпратено. Ще получиш отговор на посочения имейл.';
-                status.className = 'form-status success';
-                status.style.display = 'block';
-                document.getElementById('contactForm').reset();
-            } catch (err) {
-                console.error('Грешка при изпращане:', err);
-                status.textContent = 'Нещо се обърка. Опитай пак или се обади на 0876 127 997.';
-                status.className = 'form-status error';
-                status.style.display = 'block';
-            } finally {
-                btn.disabled = false;
-                btn.textContent = 'Изпрати';
-            }
+            fetch(GOOGLE_SHEETS_CONFIG.webAppUrl, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'contactForm', name: name, email: email, msg: msg })
+            }).catch(function (err) {
+                // no-cors прикрива реалните HTTP грешки от fetch, но ако заявката
+                // не е стигнала изобщо (напр. няма интернет), поне го логваме.
+                console.error('Грешка при изпращане на контактната форма:', err);
+            });
         });
     </script>
 </body>
