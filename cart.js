@@ -203,6 +203,19 @@ function renderContactBlock(containerId) {
     const el = document.getElementById(containerId);
     if (!el) return;
 
+    // Начална страница: винаги линк към contact-form.html отгоре, телефон под него -
+    // фиксирано, независимо от contactMode (вариант А, избран вместо вградена форма).
+    if (containerId === 'contactDynamic') {
+        const phone = SITE_SETTINGS.phone || '0876 127 997';
+        el.innerHTML =
+            '<div style="text-align:center;">' +
+                '<a href="contact-form.html" class="cta-btn" style="display:inline-block;margin-bottom:14px;">✉ Изпрати съобщение</a>' +
+                '<br>' +
+                '<a href="tel:' + phone.replace(/\s/g, '') + '" class="phone-link">📞 ' + phone + '</a>' +
+            '</div>';
+        return;
+    }
+
     if (SITE_SETTINGS.contactMode === 'form') {
         el.innerHTML =
             '<form id="siteContactForm" class="site-contact-form" style="max-width:420px;margin:0 auto;text-align:left;">' +
