@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Контактна форма | ZenAirpods</title>
+
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-RJY1QCX7W9"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-RJY1QCX7W9');
+    </script>
+
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .form-container {
+            max-width: 560px;
+            margin: 0 auto;
+            padding: 60px 20px 100px;
+        }
+
+        .form-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .form-header h1 {
+            font-family: 'DM Serif Display', serif;
+            font-size: 34px;
+            font-style: italic;
+            color: var(--primary);
+            margin-bottom: 10px;
+        }
+
+        .form-header p {
+            color: var(--text-light);
+            font-size: 14px;
+            line-height: 1.7;
+        }
+
+        .form-card {
+            background: #1a1a1a;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 32px 28px;
+        }
+
+        .form-group {
+            margin-bottom: 18px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            color: var(--text-light);
+            margin-bottom: 6px;
+        }
+
+        .form-group input,
+        .form-group textarea {
+            width: 100%;
+            padding: 11px 14px;
+            background: #0f0f0f;
+            border: 1px solid var(--border);
+            color: var(--text);
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 110px;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            border-color: var(--accent);
+        }
+
+        .form-hint {
+            font-size: 12px;
+            color: var(--text-light);
+            margin-top: 4px;
+        }
+
+        .form-submit {
+            width: 100%;
+            margin-top: 6px;
+            cursor: pointer;
+        }
+
+        .form-status {
+            margin-top: 16px;
+            font-size: 14px;
+            text-align: center;
+            display: none;
+        }
+
+        .form-status.success {
+            color: #4ade80;
+        }
+
+        .form-status.error {
+            color: #f87171;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="container">
+            <a href="index.html" class="logo">ZenAirpods</a>
+            <ul class="nav-links">
+                <li><a href="index.html">Начало</a></li>
+                <li><a href="products.html">Продукти</a></li>
+                <li><a href="index.html#contact">Контакти</a></li>
+                <li><a href="terms-of-service-условия.html">Terms of Service</a></li>
+            </ul>
+            <button class="cart-btn" id="cartBtn">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="9" cy="21" r="1"></circle>
+                    <circle cx="20" cy="21" r="1"></circle>
+                    <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
+                </svg>
+                <span class="cart-count" id="cartCount">0</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Form -->
+    <div class="form-container">
+
+        <div class="form-header">
+            <h1>Контактна форма</h1>
+            <p>Заявка за замяна при дефект, въпрос за поръчка или друго запитване — попълни полетата и ще получиш отговор на посочения имейл.</p>
+        </div>
+
+        <div class="form-card">
+            <form id="contactForm">
+                <div class="form-group">
+                    <label for="cf-name">Име</label>
+                    <input type="text" id="cf-name" placeholder="Твоето име" required>
+                </div>
+                <div class="form-group">
+                    <label for="cf-phone">Телефон</label>
+                    <input type="tel" id="cf-phone" placeholder="08xx xxx xxx">
+                </div>
+                <div class="form-group">
+                    <label for="cf-email">Имейл за отговор</label>
+                    <input type="email" id="cf-email" placeholder="example@gmail.com" required>
+                </div>
+                <div class="form-group">
+                    <label for="cf-order">Номер на поръчката (ако има)</label>
+                    <input type="text" id="cf-order" placeholder="напр. ORD-12345">
+                    <p class="form-hint">Намираш го в имейла с потвърждение на поръчката.</p>
+                </div>
+                <div class="form-group">
+                    <label for="cf-msg">Съобщение</label>
+                    <textarea id="cf-msg" placeholder="Опиши накратко проблема или въпроса си..." required></textarea>
+                </div>
+                <button type="submit" class="cta-btn form-submit" id="cf-submit-btn">Изпрати</button>
+                <p class="form-status" id="cf-status"></p>
+            </form>
+        </div>
+
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2026 ZenAirpods. Всички права запазени. &nbsp;|&nbsp; <a href="terms-of-service-условия.html" style="color: var(--text-light); text-decoration: underline;">Terms of Service</a></p>
+            <p style="font-size: 12px; color: var(--text-light); margin-top: 8px;">
+                Този сайт използва cookies за статистика и подобряване на потребителското изживяване.
+            </p>
+        </div>
+    </footer>
+
+    <script src="cart.js"></script>
+    <script>
+        // Заявката минава през СЪЩИЯ Apps Script Web App и action "contactForm",
+        // който вече съществува в Code.gs (handleContactForm) — имейлът на
+        // собственика (NOTIFICATION_EMAIL) живее само там, сървърна страна,
+        // затова никога не се появява в изходния код на тази страница.
+        document.getElementById('contactForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+
+            const name  = document.getElementById('cf-name').value.trim();
+            const phone = document.getElementById('cf-phone').value.trim();
+            const email = document.getElementById('cf-email').value.trim();
+            const order = document.getElementById('cf-order').value.trim();
+            const msgRaw = document.getElementById('cf-msg').value.trim();
+
+            const status = document.getElementById('cf-status');
+            const btn = document.getElementById('cf-submit-btn');
+
+            if (!name || !email || !msgRaw) {
+                status.textContent = 'Моля попълни име, имейл и съобщение.';
+                status.className = 'form-status error';
+                status.style.display = 'block';
+                return;
+            }
+
+            // Телефонът и номерът на поръчката се сгъват в текста на съобщението,
+            // защото бекендът (handleContactForm) засега показва само име/имейл/текст.
+            let msg = msgRaw;
+            const extraLines = [];
+            if (phone) extraLines.push('Телефон: ' + phone);
+            if (order) extraLines.push('Поръчка №: ' + order);
+            if (extraLines.length) msg = extraLines.join('\n') + '\n\n' + msgRaw;
+
+            btn.disabled = true;
+            btn.textContent = 'Изпращане...';
+
+            try {
+                await fetch(GOOGLE_SHEETS_CONFIG.webAppUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'contactForm', name: name, email: email, msg: msg })
+                });
+                status.textContent = '✓ Съобщението е изпратено. Ще получиш отговор на посочения имейл.';
+                status.className = 'form-status success';
+                status.style.display = 'block';
+                document.getElementById('contactForm').reset();
+            } catch (err) {
+                console.error('Грешка при изпращане:', err);
+                status.textContent = 'Нещо се обърка. Опитай пак или се обади на 0876 127 997.';
+                status.className = 'form-status error';
+                status.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Изпрати';
+            }
+        });
+    </script>
+</body>
+</html>
