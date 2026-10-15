@@ -56,6 +56,18 @@
     .toast.show { transform: translateY(0); opacity: 1; }
     .toast.success { border-color: var(--success); color: var(--success); }
     .toast.error { border-color: var(--danger); color: var(--danger); }
+    .reason-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: flex-end; justify-content: center; z-index: 1000; }
+    .reason-overlay.show { display: flex; }
+    .reason-box { background: var(--surface); border-top: 1px solid var(--border); border-radius: 16px 16px 0 0; padding: 1.3rem 1.1rem 1.6rem; width: 100%; max-width: 480px; }
+    .reason-box h3 { font-size: 0.95rem; font-weight: 500; margin-bottom: 0.2rem; }
+    .reason-box .reason-sub { color: var(--muted); font-size: 0.75rem; margin-bottom: 1rem; }
+    .reason-option { display: flex; align-items: flex-start; gap: 10px; padding: 10px; border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; font-size: 0.8rem; }
+    .reason-option input[type="radio"] { margin-top: 2px; accent-color: var(--accent); }
+    .reason-custom-text { width: 100%; margin-top: 6px; padding: 10px; background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 10px; font-family: 'Inter', sans-serif; font-size: 0.8rem; outline: none; resize: vertical; min-height: 56px; display: none; }
+    .reason-actions { display: flex; gap: 10px; margin-top: 1rem; }
+    .reason-actions button { flex: 1; padding: 11px; border-radius: 10px; font-size: 0.8rem; font-family: 'Inter', sans-serif; cursor: pointer; }
+    .reason-actions .btn-primary { background: var(--accent); border: none; color: #fff; }
+    .reason-actions .btn-ghost { background: none; border: 1px solid var(--border); color: var(--muted); }
   </style>
 </head>
 <body>
@@ -75,6 +87,7 @@
   <div class="tabs">
     <button class="tab active" data-tab="orders" onclick="switchTab('orders')">📋 Поръчки</button>
     <button class="tab" data-tab="reviews" onclick="switchTab('reviews')">⭐ Ревюта</button>
+    <button class="tab" data-tab="messages" onclick="switchTab('messages')">✉ Съобщения</button>
   </div>
 
   <div class="tab-panel active" id="tab-orders">
@@ -92,9 +105,33 @@
     </div>
     <div id="reviewsList"><p class="loading-note">Зареждане...</p></div>
   </div>
+
+  <div class="tab-panel" id="tab-messages">
+    <div class="toolbar">
+      <div class="toolbar-title">Съобщения</div>
+      <button class="btn-ghost" onclick="loadMessages()">↻ Обнови</button>
+    </div>
+    <div id="messagesList"><p class="loading-note">Зареждане...</p></div>
+  </div>
 </div>
 
 <div class="toast" id="toast"></div>
+
+<!-- Избор на причина за отказ на поръчка -->
+<div class="reason-overlay" id="reasonOverlay">
+  <div class="reason-box">
+    <h3>Причина за отказ</h3>
+    <p class="reason-sub" id="reasonSub"></p>
+    <label class="reason-option"><input type="radio" name="cancelReason" value="client_request" checked> Клиент поиска отказ</label>
+    <label class="reason-option"><input type="radio" name="cancelReason" value="no_answer"> Не успяхме да се свържем по телефона</label>
+    <label class="reason-option"><input type="radio" name="cancelReason" value="custom"> Друга причина</label>
+    <textarea class="reason-custom-text" id="reasonCustomText" placeholder="Опиши причината (вижда се само от теб, НЕ от клиента)..."></textarea>
+    <div class="reason-actions">
+      <button class="btn-ghost" onclick="closeReasonModal()">Отказ</button>
+      <button class="btn-primary" onclick="confirmReasonModal()">Откажи поръчката</button>
+    </div>
+  </div>
+</div>
 
 <script>
   const tg = window.Telegram ? window.Telegram.WebApp : null;
@@ -112,12 +149,17 @@
   }
 
   var reviewsLoadedOnce = false;
+  var messagesLoadedOnce = false;
   function switchTab(name) {
     document.querySelectorAll('.tab').forEach(function(t) { t.classList.toggle('active', t.dataset.tab === name); });
     document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.toggle('active', p.id === 'tab-' + name); });
     if (name === 'reviews' && !reviewsLoadedOnce) {
       reviewsLoadedOnce = true;
       loadReviews();
+    }
+    if (name === 'messages' && !messagesLoadedOnce) {
+      messagesLoadedOnce = true;
+      loadMessages();
     }
   }
 
@@ -193,11 +235,45 @@
     return res.json();
   }
 
-  async function cancelOrder(orderId, name) {
-    if (!confirm('Откажи поръчката на ' + name + '? Клиентът ще получи имейл.')) return;
-    var r = await postAction({ action: 'adminCancelOrder', orderId: orderId });
+  // ─── Избор на причина преди отказ (модал вместо directen confirm) ───
+  var pendingCancelOrderId = null;
+
+  function cancelOrder(orderId, name) {
+    pendingCancelOrderId = orderId;
+    document.getElementById('reasonSub').textContent = 'Поръчка на ' + name + ' — избери причина.';
+    document.querySelectorAll('input[name="cancelReason"]').forEach(function (r) {
+      r.checked = (r.value === 'client_request');
+    });
+    document.getElementById('reasonCustomText').value = '';
+    document.getElementById('reasonCustomText').style.display = 'none';
+    document.getElementById('reasonOverlay').classList.add('show');
+  }
+
+  document.addEventListener('change', function (e) {
+    if (e.target && e.target.name === 'cancelReason') {
+      document.getElementById('reasonCustomText').style.display = (e.target.value === 'custom') ? 'block' : 'none';
+    }
+  });
+
+  function closeReasonModal() {
+    document.getElementById('reasonOverlay').classList.remove('show');
+    pendingCancelOrderId = null;
+  }
+
+  async function confirmReasonModal() {
+    var orderId = pendingCancelOrderId;
+    if (!orderId) return;
+    var reasonType = document.querySelector('input[name="cancelReason"]:checked').value;
+    var reasonText = document.getElementById('reasonCustomText').value.trim();
+    if (reasonType === 'custom' && !reasonText) {
+      toast('Опиши причината в текстовото поле.', 'error');
+      return;
+    }
+    document.getElementById('reasonOverlay').classList.remove('show');
+    var r = await postAction({ action: 'adminCancelOrder', orderId: orderId, reasonType: reasonType, reasonText: reasonText });
     toast(r.ok ? 'Поръчката е отказана.' : (r.message || 'Грешка'), r.ok ? 'success' : 'error');
     if (r.ok) loadOrders();
+    pendingCancelOrderId = null;
   }
 
   async function silentCancelOrder(orderId, name) {
@@ -275,6 +351,52 @@
 
   function esc(s) {
     return String(s || '').replace(/'/g, "\\'").replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  // ─── СЪОБЩЕНИЯ (контактна форма) ───
+  async function loadMessages() {
+    var list = document.getElementById('messagesList');
+    list.innerHTML = '<p class="loading-note">Зареждане...</p>';
+    try {
+      var res = await fetch(SCRIPT_URL + '?action=getContactMessages&tgInitData=' + encodeURIComponent(TG_INIT_DATA));
+      var data = await res.json();
+      renderMessages(data.messages || []);
+    } catch (e) {
+      list.innerHTML = '<p class="loading-note">Грешка при зареждане.</p>';
+    }
+  }
+
+  function renderMessages(messages) {
+    var list = document.getElementById('messagesList');
+    if (!messages.length) { list.innerHTML = '<p class="empty-note">Няма съобщения.</p>'; return; }
+    list.innerHTML = messages.map(function (m) {
+      return '<div class="card">' +
+        '<div class="order-top"><span class="order-name">' + esc(m.name || '—') + '</span>' +
+          '<span class="status-pill ' + (m.replied ? 'status-other' : 'status-new') + '">' + (m.replied ? '✓ Отговорено' : '⏳ Без отговор') + '</span></div>' +
+        '<div class="order-meta">✉ ' + esc(m.email || '—') + ' · 🕒 ' + esc(m.date || '') + '</div>' +
+        '<div class="order-items">' + esc(m.msg || '') + '</div>' +
+        (m.replied
+          ? '<div class="review-author" style="margin-top:6px;">Твоят отговор: ' + esc(m.replyText || '') + '</div>'
+          : (
+              '<textarea id="reply-' + m.id + '" placeholder="Напиши отговор..." style="width:100%;margin-top:8px;padding:9px 10px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;font-family:inherit;font-size:0.8rem;outline:none;resize:vertical;min-height:60px;"></textarea>' +
+              '<div class="btn-row" style="margin-top:6px;"><button class="small-btn accent" onclick="sendMessageReply(\'' + m.id + '\')">✉ Изпрати отговор</button></div>'
+            )
+        ) +
+      '</div>';
+    }).join('');
+  }
+
+  async function sendMessageReply(id) {
+    var textarea = document.getElementById('reply-' + id);
+    var replyText = textarea.value.trim();
+    if (!replyText) { toast('Напиши отговор преди да изпратиш.', 'error'); return; }
+    var r = await postAction({ action: 'replyToContactMessage', id: id, replyText: replyText });
+    if (r.success) {
+      toast('Отговорът е изпратен (от името на ZenAirpods).', 'success');
+      loadMessages();
+    } else {
+      toast(r.message || 'Грешка при изпращане', 'error');
+    }
   }
 
   // ─── AUTH (Telegram WebApp initData) ───
