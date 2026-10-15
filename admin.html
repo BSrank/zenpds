@@ -80,6 +80,16 @@
       .product-edit-grid, .product-edit-grid.cols-4 { grid-template-columns: 1fr 1fr; }
     }
     .toast { position: fixed; bottom: 30px; right: 30px; background: var(--surface); border: 1px solid var(--border); padding: 12px 20px; border-radius: 8px; font-size: 0.85rem; z-index: 999; transform: translateY(20px); opacity: 0; transition: all 0.3s; pointer-events: none; }
+    .reason-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+    .reason-overlay.show { display: flex; }
+    .reason-box { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.6rem 1.5rem; width: min(420px, 100%); }
+    .reason-box h3 { font-size: 1rem; font-weight: 500; margin-bottom: 0.3rem; }
+    .reason-box .reason-sub { color: var(--muted); font-size: 0.78rem; margin-bottom: 1.1rem; }
+    .reason-option { display: flex; align-items: flex-start; gap: 10px; padding: 9px 10px; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 8px; cursor: pointer; font-size: 0.82rem; }
+    .reason-option:hover { border-color: var(--accent); }
+    .reason-option input[type="radio"] { margin-top: 2px; accent-color: var(--accent); }
+    .reason-custom-text { width: 100%; margin-top: 8px; padding: 9px 10px; background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 8px; font-family: 'Inter', sans-serif; font-size: 0.82rem; outline: none; resize: vertical; min-height: 60px; display: none; }
+    .reason-actions { display: flex; gap: 10px; margin-top: 1.2rem; justify-content: flex-end; }
     .toast.show { transform: translateY(0); opacity: 1; }
     .toast.success { border-color: var(--success); color: var(--success); }
     .toast.error { border-color: var(--danger); color: var(--danger); }
@@ -121,6 +131,7 @@
       <button class="tab active" data-tab="products" onclick="switchTab('products')">Продукти</button>
       <button class="tab" data-tab="orders" onclick="switchTab('orders')">Поръчки</button>
       <button class="tab" data-tab="reviews" onclick="switchTab('reviews')">Ревюта</button>
+      <button class="tab" data-tab="messages" onclick="switchTab('messages')">Съобщения</button>
       <button class="tab" data-tab="settings" onclick="switchTab('settings')">Настройки</button>
     </div>
 
@@ -166,6 +177,17 @@
       </div>
       <p class="loading-note" id="reviewsAdminLoading">Зареждане...</p>
       <div id="reviewsAdminList"></div>
+    </div>
+
+    <!-- ═══ СЪОБЩЕНИЯ (контактна форма) ═══ -->
+    <div class="tab-panel" id="tab-messages">
+      <div class="toolbar">
+        <div class="toolbar-title">Съобщения от контактната форма</div>
+        <button class="btn btn-ghost" onclick="loadContactMessages()">↻ Обнови</button>
+      </div>
+      <p style="font-size:0.72rem;color:var(--muted);margin-bottom:0.8rem;">💡 Отговорът се праща от името на ZenAirpods (както всички останали имейли от сайта) - клиентът не вижда личния ти Gmail адрес.</p>
+      <p class="loading-note" id="messagesLoading">Зареждане...</p>
+      <div id="messagesList"></div>
     </div>
 
     <!-- ═══ НАСТРОЙКИ ═══ -->
@@ -264,6 +286,22 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- Избор на причина за отказ на поръчка -->
+<div class="reason-overlay" id="reasonOverlay">
+  <div class="reason-box">
+    <h3>Причина за отказ</h3>
+    <p class="reason-sub" id="reasonSub"></p>
+    <label class="reason-option"><input type="radio" name="cancelReason" value="client_request" checked> Клиент поиска отказ</label>
+    <label class="reason-option"><input type="radio" name="cancelReason" value="no_answer"> Не успяхме да се свържем по телефона</label>
+    <label class="reason-option"><input type="radio" name="cancelReason" value="custom"> Друга причина</label>
+    <textarea class="reason-custom-text" id="reasonCustomText" placeholder="Опиши причината (вижда се само от теб, НЕ от клиента)..."></textarea>
+    <div class="reason-actions">
+      <button class="btn btn-ghost" onclick="closeReasonModal()">Отказ</button>
+      <button class="btn btn-primary" onclick="confirmReasonModal()">Откажи поръчката</button>
+    </div>
+  </div>
+</div>
+
 <script>
   // ─── CONFIG ───
   var GITHUB_REPO = sessionStorage.getItem('zen_repo') || 'BSrank/zenpds';
@@ -329,6 +367,7 @@
     document.querySelectorAll('.tab-panel').forEach(p => p.classList.toggle('active', p.id === 'tab-' + name));
     if (name === 'orders') loadOrders();
     if (name === 'reviews') loadReviewsAdmin();
+    if (name === 'messages') loadContactMessages();
   }
 
   // ─── GITHUB SAVE QUEUE ───
@@ -755,23 +794,61 @@
     }).join('');
   }
 
-  async function adminCancelOrder(orderId, clientName) {
-    if (!confirm('Сигурен ли си, че искаш да откажеш поръчката на ' + clientName + '? Клиентът ще получи имейл, че поръчката е отказана.')) return;
+  // ─── Избор на причина преди отказ (модал вместо directen confirm) ───
+  var pendingCancelOrderId = null;
+  var pendingCancelClientName = null;
+
+  function adminCancelOrder(orderId, clientName) {
+    pendingCancelOrderId = orderId;
+    pendingCancelClientName = clientName;
+    document.getElementById('reasonSub').textContent =
+      'Поръчка на ' + clientName + ' — избери причина (виж по-долу коя се показва на клиента).';
+    var radios = document.querySelectorAll('input[name="cancelReason"]');
+    radios.forEach(function (r) { r.checked = (r.value === 'client_request'); });
+    document.getElementById('reasonCustomText').value = '';
+    document.getElementById('reasonCustomText').style.display = 'none';
+    document.getElementById('reasonOverlay').classList.add('show');
+  }
+
+  // Custom текстовото поле се показва само когато е избрана "Друга причина"
+  document.addEventListener('change', function (e) {
+    if (e.target && e.target.name === 'cancelReason') {
+      document.getElementById('reasonCustomText').style.display = (e.target.value === 'custom') ? 'block' : 'none';
+    }
+  });
+
+  function closeReasonModal() {
+    document.getElementById('reasonOverlay').classList.remove('show');
+    pendingCancelOrderId = null;
+  }
+
+  async function confirmReasonModal() {
+    var orderId = pendingCancelOrderId;
+    var clientName = pendingCancelClientName;
+    if (!orderId) return;
+    var reasonType = document.querySelector('input[name="cancelReason"]:checked').value;
+    var reasonText = document.getElementById('reasonCustomText').value.trim();
+    if (reasonType === 'custom' && !reasonText) {
+      toast('Моля опиши причината в текстовото поле.', 'error');
+      return;
+    }
+    document.getElementById('reasonOverlay').classList.remove('show');
     try {
       const res = await fetch(SCRIPT_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: 'adminCancelOrder', orderId: orderId })
+        body: JSON.stringify({ action: 'adminCancelOrder', orderId: orderId, reasonType: reasonType, reasonText: reasonText })
       });
       const result = await res.json();
       if (result && result.ok) {
-        toast('Поръчката е отказана. Клиентът е уведомен по имейл.', 'success');
+        toast('Поръчката на ' + clientName + ' е отказана. Клиентът е уведомен по имейл.', 'success');
         ordersLoaded = false;
         loadOrders();
       } else {
         toast((result && result.message) ? result.message : 'Грешка при отказ на поръчката', 'error');
       }
     } catch (e) { toast('Грешка при връзка със сървъра', 'error'); }
+    pendingCancelOrderId = null;
   }
 
   async function adminSilentCancelOrder(orderId, clientName) {
@@ -912,6 +989,66 @@
       await removeClientReviewFromSettings_(id);
       loadReviewsAdmin();
     } catch(e) { toast('Грешка', 'error'); }
+  }
+
+  // ─── СЪОБЩЕНИЯ (КОНТАКТНА ФОРМА) ───
+  async function loadContactMessages() {
+    document.getElementById('messagesLoading').style.display = 'block';
+    try {
+      var res = await fetch(SCRIPT_URL + '?action=getContactMessages');
+      var data = await res.json();
+      renderContactMessages(data.messages || []);
+    } catch (e) {
+      document.getElementById('messagesLoading').textContent = 'Грешка при зареждане.';
+    }
+  }
+
+  function renderContactMessages(messages) {
+    var list = document.getElementById('messagesList');
+    document.getElementById('messagesLoading').style.display = 'none';
+    if (!messages.length) {
+      list.innerHTML = '<p class="empty-note">Няма съобщения все още.</p>';
+      return;
+    }
+    list.innerHTML = messages.map(function (m) {
+      return '<div class="card">' +
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:0.6rem;">' +
+          '<div>' +
+            '<div style="font-size:0.85rem;font-weight:500;">' + esc_(m.name || '—') + ' &middot; <a href="mailto:' + esc_(m.email || '') + '" style="color:var(--accent);">' + esc_(m.email || '—') + '</a></div>' +
+            '<div style="font-size:0.68rem;color:var(--muted);">' + esc_(m.date || '') + '</div>' +
+          '</div>' +
+          '<span class="badge ' + (m.replied ? 'on' : 'off') + '">' + (m.replied ? '✓ Отговорено' : '⏳ Без отговор') + '</span>' +
+        '</div>' +
+        '<div style="font-size:0.85rem;color:var(--text);white-space:pre-line;background:var(--surface2);padding:10px 12px;border-radius:8px;margin-bottom:0.7rem;">' + esc_(m.msg || '') + '</div>' +
+        (m.replied
+          ? '<div style="font-size:0.78rem;color:var(--muted);"><strong style="color:var(--text);">Твоят отговор:</strong><br>' + esc_(m.replyText || '') + '</div>'
+          : (
+            '<textarea id="reply-' + m.id + '" placeholder="Напиши отговор..." style="width:100%;min-height:70px;padding:9px 10px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:inherit;font-size:0.82rem;border-radius:8px;outline:none;resize:vertical;margin-bottom:0.5rem;"></textarea>' +
+            '<button class="small-btn accent" onclick="sendContactReply(\'' + m.id + '\')">✉ Изпрати отговор</button>'
+          )
+        ) +
+      '</div>';
+    }).join('');
+  }
+
+  async function sendContactReply(id) {
+    var textarea = document.getElementById('reply-' + id);
+    var replyText = textarea.value.trim();
+    if (!replyText) { toast('Напиши отговор преди да изпратиш.', 'error'); return; }
+    try {
+      const res = await fetch(SCRIPT_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'replyToContactMessage', id: id, replyText: replyText })
+      });
+      const result = await res.json();
+      if (result && result.success) {
+        toast('Отговорът е изпратен до клиента (от името на ZenAirpods).', 'success');
+        loadContactMessages();
+      } else {
+        toast((result && result.message) || 'Грешка при изпращане', 'error');
+      }
+    } catch (e) { toast('Грешка при връзка със сървъра', 'error'); }
   }
 
   // Добавя/обновява едно одобрено ревю в siteSettings.clientReviews и записва
