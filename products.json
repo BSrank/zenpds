@@ -91,7 +91,7 @@
     "siteName": "ZenAirpods",
     "siteDomain": "https://zenairpods.store/",
     "scriptUrlEncoded": "aHR0cHM6Ly9zY3JpcHQuZ29vZ2xlLmNvbS9tYWNyb3Mvcy9BS2Z5Y2J6S2o5dHR1dkNNSkZGM0RKdVBCcnkxNUJ1aUxrV3pMa3UyTndERGJ0WlM3b1o1amdIdFFwMWpsMmQ5YmVydEhZWW4vZXhlYw==",
-    "contactMode": "form",
+    "contactMode": "phone",
     "phone": "0876 127 997",
     "hours": "Всеки ден",
     "showManualReviews": true,
