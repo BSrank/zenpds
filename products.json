@@ -104,6 +104,41 @@
       "sections": [],
       "active": false,
       "isNewListing": false
+    },
+    {
+      "id": "adapter14",
+      "name": "Адаптер USB-C за iPhone до 14 Pro Max – 20W",
+      "price": 0,
+      "priceBgn": 0,
+      "comparePrice": 0,
+      "comparePriceBgn": 0,
+      "imageMain": "",
+      "imagePrefix": "",
+      "previewFeatures": [
+        "• Мощност: 20W",
+        "• USB-C порт",
+        "• За съвместими модели iPhone до 14 Pro Max",
+        "• Подходящ за Lightning към USB-C кабел"
+      ],
+      "sections": [
+        {
+          "title": "USB-C заряден адаптер 20W за iPhone",
+          "items": [
+            "Компактен заряден адаптер за съвместими модели iPhone. Подходящ за използване с Lightning към USB-C кабел."
+          ]
+        },
+        {
+          "title": "Характеристики",
+          "items": [
+            "• Тип: заряден адаптер",
+            "• Мощност: 20W",
+            "• Порт: USB-C",
+            "• Съвместимост: подходящ за зареждане на съвместими модели iPhone до 14 Pro Max с подходящ кабел"
+          ]
+        }
+      ],
+      "active": false,
+      "isNewListing": false
     }
   ],
   "settings": {
