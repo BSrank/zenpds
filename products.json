@@ -85,6 +85,25 @@
         }
       ],
       "active": true
+    },
+    {
+      "id": "lightning14",
+      "name": "Lightning кабел за iPhone до 14 Pro Max",
+      "price": 0,
+      "priceBgn": 0,
+      "comparePrice": 0,
+      "comparePriceBgn": 0,
+      "imageMain": "",
+      "imagePrefix": "",
+      "previewFeatures": [
+        "• Lightning конектор",
+        "• За съвместими модели iPhone до 14 Pro Max",
+        "• Подходящ за зареждане",
+        "• Съвместим с USB-C адаптер 20W"
+      ],
+      "sections": [],
+      "active": false,
+      "isNewListing": false
     }
   ],
   "settings": {
