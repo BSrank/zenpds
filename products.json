@@ -157,13 +157,13 @@
       "isNewListing": false
     },
     {
-      "id": "cable18",
+      "id": "cable17",
       "name": "USB-C кабел за iPhone – серии 15–18 Pro Max",
       "price": 10,
       "priceBgn": 0,
       "comparePrice": 0,
       "comparePriceBgn": 0,
-      "imageMain": "",
+      "imageMain": "Cable17.jpg",
       "imagePrefix": "",
       "previewFeatures": [
         "• USB-C към USB-C",
@@ -192,13 +192,13 @@
       "isNewListing": false
     },
     {
-      "id": "adapter18",
+      "id": "adapter17",
       "name": "USB-C заряден адаптер за iPhone серии до 18 Pro Max – 40W",
       "price": 15,
       "priceBgn": 0,
       "comparePrice": 0,
       "comparePriceBgn": 0,
-      "imageMain": "",
+      "imageMain": "adapter17.jpg",
       "imagePrefix": "",
       "previewFeatures": [
         "• Мощност: 40W",
