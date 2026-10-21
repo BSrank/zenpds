@@ -41,7 +41,7 @@
           ]
         }
       ],
-      "active": false
+      "active": true
     },
     {
       "id": "gen4",
@@ -84,7 +84,7 @@
           ]
         }
       ],
-      "active": false
+      "active": true
     },
     {
       "id": "cable14",
