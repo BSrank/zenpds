@@ -172,8 +172,8 @@
           ]
         }
       ],
-      "active": true,
-      "isNewListing": true
+      "active": false,
+      "isNewListing": false
     }
   ],
   "settings": {
