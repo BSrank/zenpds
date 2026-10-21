@@ -87,7 +87,7 @@
       "active": true
     },
     {
-      "id": "lightning14",
+      "id": "cable14",
       "name": "Lightning кабел за iPhone до 14 Pro Max",
       "price": 0,
       "priceBgn": 0,
@@ -139,6 +139,41 @@
       ],
       "active": false,
       "isNewListing": false
+    },
+    {
+      "id": "cable18",
+      "name": "USB-C кабел за iPhone – серии 15–18 Pro Max",
+      "price": 0,
+      "priceBgn": 0,
+      "comparePrice": 0,
+      "comparePriceBgn": 0,
+      "imageMain": "",
+      "imagePrefix": "",
+      "previewFeatures": [
+        "• USB-C към USB-C",
+        "• За съвместими модели iPhone от серии 15–18",
+        "• Подходящ за зареждане",
+        "• Съвместим с USB-C адаптер 40W"
+      ],
+      "sections": [
+        {
+          "title": "USB-C кабел за iPhone",
+          "items": [
+            "Кабел за зареждане на съвместими модели iPhone с USB-C порт. Подходящ за ежедневна употреба и за използване с USB-C заряден адаптер."
+          ]
+        },
+        {
+          "title": "Характеристики",
+          "items": [
+            "• Тип конектори: USB-C към USB-C",
+            "• Предназначение: зареждане",
+            "• Съвместимост: iPhone серии 15–18 с USB-C порт",
+            "• Подходящ за използване с USB-C адаптер 40W"
+          ]
+        }
+      ],
+      "active": true,
+      "isNewListing": true
     }
   ],
   "settings": {
