@@ -96,6 +96,17 @@
     .badge { font-size: 0.62rem; letter-spacing: 0.08em; padding: 2px 8px; border-radius: 10px; text-transform: uppercase; }
     .badge.on { background: rgba(82,192,122,0.15); color: var(--success); }
     .badge.off { background: rgba(224,82,82,0.1); color: var(--danger); }
+    .img-upload-row { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 0.9rem; }
+    .img-upload-slot { text-align: center; }
+    .img-upload-slot .img-slot-label { font-size: 0.58rem; color: var(--muted); margin-bottom: 4px; letter-spacing: 0.03em; text-transform: uppercase; }
+    .img-upload-slot .img-preview { width: 54px; height: 54px; border-radius: 6px; background: var(--surface2); border: 1px solid var(--border); overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.6rem; color: var(--muted); margin: 0 auto 4px; }
+    .img-upload-slot .img-preview img { width: 100%; height: 100%; object-fit: cover; }
+    .img-upload-slot input[type="file"] { display: none; }
+    .img-upload-slot .img-upload-btn { padding: 3px 9px; font-size: 0.62rem; }
+    .move-btn { padding: 4px 9px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; background: none; border: 1px solid var(--border); color: var(--muted); font-family: 'Inter', sans-serif; }
+    .move-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+    .move-btn:disabled { opacity: 0.25; cursor: default; }
+    .position-badge { font-size: 0.66rem; color: var(--muted); border: 1px solid var(--border); border-radius: 6px; padding: 3px 9px; white-space: nowrap; }
     .empty-note { color: var(--muted); font-size: 0.85rem; padding: 1.5rem 0; text-align: center; }
     .loading-note { color: var(--muted); font-size: 0.85rem; padding: 1rem 0; }
     @media (max-width: 700px) {
@@ -146,7 +157,9 @@
       <button class="btn btn-ghost" style="margin-bottom:1.2rem;" onclick="addProduct()">+ Добави продукт</button>
       <p style="font-size:0.75rem;color:var(--muted);margin-top:0.5rem;">
         💡 "Оригинална" цена е по-висока зачертана цена до истинската, за да изглежда продуктът намален/на промоция. Остави я на 0, за да не се показва.<br>
-        💡 Снимките на продукта трябва да са качени в GitHub repo-то с имена <code>{префикс}.1.jpg</code>, <code>{префикс}.2.jpg</code>... (до 12), плюс главна снимка с отделно име — "Префикс на снимките" по-долу трябва да съвпада точно.<br>
+        💡 Снимките на продукта трябва да са качени в GitHub repo-то с имена <code>{префикс}.1.jpg</code>, <code>{префикс}.2.jpg</code>... (до 12), плюс главна снимка с отделно име — "Префикс на снимките" по-долу трябва да съвпада точно. Вече качени продукти с попълнени тези полета продължават да работят точно както досега.<br>
+        💡 Ново: вместо да ъплоудваш снимките ръчно в GitHub, можеш да ги качиш директно от тук с бутоните 📤 под всеки продукт — пътят/префиксът се попълват автоматично. Ръчното въвеждане на текст в полетата по-горе също продължава да работи, ако го предпочиташ.<br>
+        💡 Ново: с бутоните ↑ ↓ до всеки продукт сменяш реда му — това е точно подредбата, в която продуктите се показват на клиентите в "Продукти" (първият в списъка тук = първият, който вижда клиентът).<br>
         💡 "Нова обява" продукти са напълно скрити от сайта, докато не включиш "Покажи новите продукти" от таб Настройки — можеш да подготвиш всичко спокойно преди да ги пуснеш.
       </p>
     </div>
@@ -564,6 +577,12 @@
     return sections;
   }
 
+  // Локални (само на страницата, НЕ се пазят в products.json) миниатюри за
+  // бутоните за качване на снимки - показват веднага избрания файл, преди/след
+  // да е завършило качването в GitHub, ключувани по product.id (стабилно и
+  // след местене нагоре/надолу или изтриване на друг продукт).
+  var productImgPreviews = {};
+
   function renderProductsList() {
     var list = document.getElementById('productsList');
     if (!products.length) {
@@ -572,8 +591,25 @@
     }
     list.innerHTML = products.map(function(p, idx) {
       var isNew = p.isNewListing === true;
+      var previewKey = p.id || ('idx' + idx);
+      var slots = ['main', 1, 2, 3, 4, 5];
+      var imgRow = '<div class="img-upload-row">' + slots.map(function(slot) {
+        var cachedUrl = productImgPreviews[previewKey + '_' + slot];
+        var previewInner = cachedUrl ? '<img src="' + cachedUrl + '">' : (slot === 'main' ? '★' : String(slot));
+        var label = slot === 'main' ? 'Главна' : ('№' + slot);
+        return '<div class="img-upload-slot">' +
+          '<div class="img-slot-label">' + label + '</div>' +
+          '<div class="img-preview" id="imgPreview-' + idx + '-' + slot + '">' + previewInner + '</div>' +
+          '<input type="file" accept="image/*" id="imgFile-' + idx + '-' + slot + '" onchange="uploadProductImage(' + idx + ',\'' + slot + '\',this)" />' +
+          '<button type="button" class="small-btn img-upload-btn" onclick="document.getElementById(\'imgFile-' + idx + '-' + slot + '\').click()">📤</button>' +
+        '</div>';
+      }).join('') + '</div>';
+
       return '<div class="product-edit-card' + (isNew ? ' new-listing' : '') + '">' +
         '<div class="product-edit-header">' +
+          '<span class="position-badge">#' + (idx + 1) + '</span>' +
+          '<button type="button" class="move-btn" onclick="moveProduct(' + idx + ',-1)" ' + (idx === 0 ? 'disabled' : '') + ' title="Премести по-нагоре в подредбата на сайта">↑</button>' +
+          '<button type="button" class="move-btn" onclick="moveProduct(' + idx + ',1)" ' + (idx === products.length - 1 ? 'disabled' : '') + ' title="Премести по-надолу в подредбата на сайта">↓</button>' +
           '<div class="product-name-cell">' + esc_(p.name || '(без име)') + (isNew ? ' <span class="badge" style="background:rgba(37,99,235,0.15);color:var(--accent);">нова обява</span>' : '') + '</div>' +
           '<div class="toggle-row" style="padding:0;">' +
             '<div class="toggle-switch ' + (p.active !== false ? 'on' : '') + '" onclick="toggleProductField(' + idx + ',\'active\',this)"></div>' +
@@ -602,6 +638,8 @@
           '<div><label class="field-label">Префикс на снимките (напр. "charger")</label><input type="text" value="' + esc_(p.imagePrefix) + '" onchange="products[' + idx + '].imagePrefix = this.value.trim();" /></div>' +
           '<div><label class="field-label">Файл на главната снимка</label><input type="text" value="' + esc_(p.imageMain) + '" onchange="products[' + idx + '].imageMain = this.value.trim();" /></div>' +
         '</div>' +
+
+        imgRow +
 
         '<div style="margin-bottom:0.7rem;">' +
           '<label class="field-label">Кратки точки за преглед (по една на ред — показват се в картата на продукта)</label>' +
@@ -651,6 +689,126 @@
     if (!confirm('Сигурен ли си, че искаш да изтриеш "' + (p.name || 'този продукт') + '"? Това не изтрива снимките от GitHub, само записа тук.')) return;
     products.splice(idx, 1);
     renderProductsList();
+  }
+
+  // Размества продукт нагоре (-1) или надолу (+1) в масива. cart.js показва
+  // продуктите на сайта СТРИКТНО в реда, в който стоят в products.json (без
+  // никакво сортиране) - затова самото разместване тук Е подредбата на сайта;
+  // не трябва нищо друго да се пипа в cart.js или в схемата на продукта.
+  function moveProduct(idx, direction) {
+    var newIdx = idx + direction;
+    if (newIdx < 0 || newIdx >= products.length) return;
+    var tmp = products[idx];
+    products[idx] = products[newIdx];
+    products[newIdx] = tmp;
+    renderProductsList();
+  }
+
+  // ─── КАЧВАНЕ НА СНИМКИ (директно в GitHub repo-то) ───
+  // Чисто допълнителна опция - полетата "Префикс на снимките" / "Файл на
+  // главната снимка" по-горе продължават да работят точно както досега, и
+  // продукти с вече попълнени такива полета НЕ се пипат от този код, освен
+  // ако админът изрично качи нова снимка през бутон 📤 за тях.
+  //
+  // Конвенция (съвпада с това, което cart.js вече очаква в loadImagesForProduct):
+  //   - главна снимка: произволно име/разширение (каквото е в imageMain)
+  //   - снимки от галерията: ВИНАГИ "{prefix}.{N}.jpg" (разширението е
+  //     фиксирано .jpg от cart.js, затова винаги записваме точно с това
+  //     разширение, независимо от оригиналния формат на избрания файл)
+  function fileToBase64_(file) {
+    return new Promise(function(resolve, reject) {
+      var reader = new FileReader();
+      reader.onload = function() { resolve(String(reader.result).split(',')[1] || ''); };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // GET (взима sha, ако файлът вече съществува на този път - иначе качваме
+  // нов файл без sha) + PUT с base64 съдържание. Използва СЪЩАТА опашка
+  // (queueGitHubSave) като записа на products.json, само за да не изстрелваме
+  // няколко паралелни GitHub заявки едновременно - пътищата са различни от
+  // products.json, затова няма риск от 409 конфликт помежду им.
+  async function uploadImageToGithub_(file, destPath) {
+    return queueGitHubSave(async function() {
+      try {
+        var sha = null;
+        try {
+          var getRes = await fetch('https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + destPath, {
+            headers: { 'Authorization': 'token ' + GITHUB_TOKEN, 'Accept': 'application/vnd.github.v3+json' }
+          });
+          if (getRes.ok) { var getData = await getRes.json(); sha = getData.sha; }
+        } catch (e) { /* файлът вероятно не съществува още - качваме го нов */ }
+
+        var base64 = await fileToBase64_(file);
+        var body = { message: 'Admin: качена снимка ' + destPath, content: base64 };
+        if (sha) body.sha = sha;
+
+        var res = await fetch('https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + destPath, {
+          method: 'PUT',
+          headers: { 'Authorization': 'token ' + GITHUB_TOKEN, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        var data = await res.json();
+        if (!res.ok) return { ok: false, message: data.message || ('HTTP ' + res.status) };
+        return { ok: true, path: destPath, downloadUrl: (data.content && data.content.download_url) || '' };
+      } catch (e) {
+        return { ok: false, message: e.message || String(e) };
+      }
+    });
+  }
+
+  async function uploadProductImage(idx, slot, inputEl) {
+    var file = inputEl.files && inputEl.files[0];
+    if (!file) return;
+    var p = products[idx];
+    if (!p.id || !p.id.trim()) {
+      toast('Първо задай ID на продукта (полето "ID" по-горе), после качвай снимки.', 'error');
+      inputEl.value = '';
+      return;
+    }
+
+    // Веднага показваме локален преглед на избрания файл (преди да е качен),
+    // за моментална визуална обратна връзка - независимо дали качването
+    // после успее.
+    var previewKey = p.id;
+    var localUrl = URL.createObjectURL(file);
+    productImgPreviews[previewKey + '_' + slot] = localUrl;
+    var previewEl = document.getElementById('imgPreview-' + idx + '-' + slot);
+    if (previewEl) previewEl.innerHTML = '<img src="' + localUrl + '">';
+
+    toast('Качване на снимката...', 'success');
+
+    var isMain = (slot === 'main');
+    var destPath;
+    if (isMain) {
+      // Ако вече има зададен файл за главната снимка - качваме НА СЪЩОТО място
+      // (презаписваме), за да не чупим вече съществуваща конфигурация. Иначе
+      // генерираме нов, разбираем път на база ID на продукта.
+      var ext = (file.name && file.name.match(/\.[a-zA-Z0-9]+$/)) ? file.name.match(/\.[a-zA-Z0-9]+$/)[0].toLowerCase() : '.jpg';
+      destPath = (p.imageMain && p.imageMain.trim()) ? p.imageMain.trim() : ('products/' + p.id.trim() + '/main' + ext);
+    } else {
+      // Галерийните снимки трябва да са точно "{prefix}.{N}.jpg" - cart.js
+      // проверява само това разширение (виж loadImagesForProduct в cart.js).
+      var prefix = (p.imagePrefix && p.imagePrefix.trim()) ? p.imagePrefix.trim() : ('products/' + p.id.trim() + '/photo');
+      destPath = prefix + '.' + slot + '.jpg';
+    }
+
+    var result = await uploadImageToGithub_(file, destPath);
+    if (!result.ok) {
+      toast('Грешка при качване: ' + result.message, 'error');
+      inputEl.value = '';
+      return;
+    }
+
+    if (isMain) {
+      products[idx].imageMain = destPath;
+    } else if (!p.imagePrefix || !p.imagePrefix.trim()) {
+      products[idx].imagePrefix = destPath.replace(/\.\d+\.jpg$/, '');
+    }
+
+    renderProductsList();
+    toast('Снимката е качена в GitHub! Не забравяй да натиснеш "💾 Запази промените" горе, за да влезе пътят в сила на сайта.', 'success');
   }
 
   // ─── SETTINGS TAB ───
