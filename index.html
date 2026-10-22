@@ -84,39 +84,14 @@
         <div class="container">
             <h2 class="section-title">Нашите продукти</h2>
             <div class="products-preview-grid" id="productsPreviewGrid">
-                <!-- Статичен fallback - презаписва се динамично от products.json при
-                     успешно зареждане (виж cart.js). Ако products.json не се зареди
-                     по някаква причина, посетителите пак виждат тези продукти. -->
-                <a href="products.html#pro3" class="product-preview-card">
-                    <div class="product-preview-image" id="previewImage-pro3">
-                        <div class="product-image-placeholder">AirPods<br>Pro 3</div>
-                    </div>
-                    <div class="product-preview-info">
-                        <h3 class="product-preview-title">AirPods Pro 3 ANC</h3>
-                        <p class="product-preview-price">€35.79</p>
-                        <ul class="product-preview-features">
-                            <li>Active Noise Cancellation</li>
-                            <li>Съвместимост с iOS и Android</li>
-                            <li>6+ часа батерия</li>
-                        </ul>
-                        <span class="preview-cta">Виж повече →</span>
-                    </div>
-                </a>
-                <a href="products.html#gen4" class="product-preview-card">
-                    <div class="product-preview-image" id="previewImage-gen4">
-                        <div class="product-image-placeholder">AirPods<br>Gen 4</div>
-                    </div>
-                    <div class="product-preview-info">
-                        <h3 class="product-preview-title">AirPods Gen 4 ANC</h3>
-                        <p class="product-preview-price">€33.23</p>
-                        <ul class="product-preview-features">
-                            <li>Active Noise Cancellation</li>
-                            <li>Съвместимост с iOS и Android</li>
-                            <li>6+ часа батерия</li>
-                        </ul>
-                        <span class="preview-cta">Виж повече →</span>
-                    </div>
-                </a>
+                <!-- Съдържанието идва ИЗЦЯЛО динамично от products.json (виж cart.js,
+                     renderProductsPreview()) - точно както при всеки друг продукт.
+                     Преди тук имаше хардкоднати статични карти за AirPods Pro 3/Gen 4
+                     като "fallback" - премахнати нарочно, защото караха тези два
+                     продукта да останат видими на сайта дори след като се маркират
+                     като неактивни в админ панела (докато всеки друг продукт изчезваше
+                     коректно). Ако products.json не се зареди по някаква причина,
+                     секцията просто остава празна, вместо да показва остарели данни. -->
             </div>
         </div>
     </section>
