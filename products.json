@@ -226,6 +226,20 @@
       ],
       "active": false,
       "isNewListing": false
+    },
+    {
+      "id": "Cable17-1m",
+      "name": "USB-C кабел за iPhone 45w 1m – серии 15–18 Pro Max",
+      "price": 10,
+      "priceBgn": 0,
+      "comparePrice": 0,
+      "comparePriceBgn": 0,
+      "imageMain": "Cable17-1m",
+      "imagePrefix": "Cable17-1m",
+      "previewFeatures": [],
+      "sections": [],
+      "active": true,
+      "isNewListing": true
     }
   ],
   "settings": {
