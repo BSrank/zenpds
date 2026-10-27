@@ -128,8 +128,8 @@
       "priceBgn": 0,
       "comparePrice": 0,
       "comparePriceBgn": 0,
-      "imageMain": "",
-      "imagePrefix": "",
+      "imageMain": "products/adapter14/main.jpg",
+      "imagePrefix": "products/adapter14/photo",
       "previewFeatures": [
         "• Мощност: 20W",
         "• USB-C порт",
