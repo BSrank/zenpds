@@ -192,16 +192,16 @@
       "isNewListing": false
     },
     {
-      "id": "adapter17",
+      "id": "adapter17-40w",
       "name": "USB-C заряден адаптер за iPhone серии до 18 Pro Max – 40W Dynamic ",
       "price": 25,
       "priceBgn": 0,
       "comparePrice": 0,
       "comparePriceBgn": 0,
-      "imageMain": "adapter17.jpg",
-      "imagePrefix": "adapter17",
+      "imageMain": "adapter17-40w.jpg",
+      "imagePrefix": "adapter17-40w",
       "previewFeatures": [
-        "• Мощност: 45W",
+        "• Мощност: 40W - 60W Dynamic",
         "• USB-C порт",
         "• За съвместими модели iPhone",
         "• Подходящ за USB-C кабел"
@@ -217,7 +217,7 @@
           "title": "Характеристики",
           "items": [
             "• Тип: заряден адаптер",
-            "• Мощност: 45W Dynamic 60w",
+            "• Мощност: 40W Dynamic 60w",
             "• Порт: USB-C",
             "• Съвместимост: устройства с USB-C порт",
             "• Поддържаната скорост на зареждане зависи от конкретния модел iPhone и кабела"
@@ -240,7 +240,7 @@
         "• USB-C към USB-C",
         "• За съвместими модели iPhone от серии 15–18",
         "• Подходящ за зареждане",
-        "• Съвместим с USB-C адаптер 35W - 45 W"
+        "• Съвместим с USB-C адаптер 35W - 40 W"
       ],
       "sections": [
         {
@@ -255,7 +255,43 @@
             "• Тип конектори: USB-C към USB-C",
             "• Предназначение: зареждане",
             "• Съвместимост: iPhone серии 15–18 с USB-C порт",
-            "• Подходящ за използване с USB-C адаптер  [ 35W - 45W ]"
+            "• Подходящ за използване с USB-C адаптер  [ 35W - 40W ]"
+          ]
+        }
+      ],
+      "active": true,
+      "isNewListing": true
+    },
+    {
+      "id": "adapter17-35w",
+      "name": "USB-C заряден адаптер за iPhone серии до 18 Pro Max - 35W",
+      "price": 0,
+      "priceBgn": 0,
+      "comparePrice": 0,
+      "comparePriceBgn": 0,
+      "imageMain": "adapter17-35w",
+      "imagePrefix": "adapter17-35w",
+      "previewFeatures": [
+        "• Мощност: 35W",
+        "• USB-C порт",
+        "• За съвместими модели iPhone",
+        "• Подходящ за USB-C кабел"
+      ],
+      "sections": [
+        {
+          "title": "USB-C заряден адаптер 40W за iPhone",
+          "items": [
+            "Заряден адаптер с USB-C порт за съвместими модели iPhone. Подходящ за използване с USB-C кабел за зареждане."
+          ]
+        },
+        {
+          "title": "Характеристики",
+          "items": [
+            "• Тип: заряден адаптер",
+            "• Мощност:  35W",
+            "• Порт: USB-C",
+            "• Съвместимост: устройства с USB-C порт",
+            "• Поддържаната скорост на зареждане зависи от конкретния модел iPhone и кабела"
           ]
         }
       ],
