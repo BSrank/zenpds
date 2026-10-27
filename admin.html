@@ -64,6 +64,19 @@
     .orders-table td, .reviews-table td { padding: 0.7rem 0.6rem; border-bottom: 1px solid var(--border); font-size: 0.8rem; vertical-align: top; }
     .orders-table tr:hover td, .reviews-table tr:hover td { background: var(--surface2); }
     .order-items-list { font-size: 0.72rem; color: var(--muted); margin-top: 3px; white-space: pre-line; }
+    .order-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.1rem 1.2rem; margin-bottom: 0.9rem; }
+    .order-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; gap: 0.6rem; }
+    .order-name { font-size: 0.95rem; font-weight: 500; }
+    .order-total { color: var(--accent2); font-size: 0.9rem; font-weight: 500; white-space: nowrap; }
+    .order-meta { font-size: 0.78rem; color: var(--muted); line-height: 1.65; margin-bottom: 8px; }
+    .order-items { font-size: 0.78rem; color: var(--muted); white-space: pre-line; margin-bottom: 10px; border-top: 1px solid var(--border); padding-top: 8px; }
+    .status-pill { display: inline-block; font-size: 0.62rem; letter-spacing: 0.06em; text-transform: uppercase; padding: 2px 9px; border-radius: 10px; }
+    .status-new { background: rgba(79,131,241,0.15); color: var(--accent2); }
+    .status-cancelled { background: rgba(224,82,82,0.15); color: var(--danger); }
+    .status-noresponse { background: rgba(136,136,136,0.15); color: var(--muted); }
+    .status-other { background: rgba(82,192,122,0.15); color: var(--success); }
+    .order-btn-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .order-btn-row .small-btn { flex: 1; min-width: 90px; padding: 8px 10px; text-align: center; }
     .small-btn { padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 0.68rem; letter-spacing: 0.04em; font-family: 'Inter', sans-serif; background: none; border: 1px solid var(--border); color: var(--muted); transition: all 0.2s; white-space: nowrap; }
     .small-btn:hover { border-color: var(--accent); color: var(--accent); }
     .small-btn.danger:hover { border-color: var(--danger); color: var(--danger); }
@@ -103,6 +116,8 @@
     .img-upload-slot .img-preview img { width: 100%; height: 100%; object-fit: cover; }
     .img-upload-slot input[type="file"] { display: none; }
     .img-upload-slot .img-upload-btn { padding: 3px 9px; font-size: 0.62rem; }
+    .img-upload-slot .img-slot-btns { display: flex; gap: 3px; justify-content: center; }
+    .img-upload-slot .img-remove-btn { padding: 3px 7px; font-size: 0.62rem; border-color: var(--danger); color: var(--danger); }
     .move-btn { padding: 4px 9px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; background: none; border: 1px solid var(--border); color: var(--muted); font-family: 'Inter', sans-serif; }
     .move-btn:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
     .move-btn:disabled { opacity: 0.25; cursor: default; }
@@ -171,14 +186,8 @@
         <button class="btn btn-ghost" onclick="ordersLoaded=false;loadOrders();">↻ Обнови</button>
       </div>
       <p class="loading-note" id="ordersLoading">Зареждане...</p>
-      <p style="font-size:0.72rem;color:var(--muted);margin-bottom:0.6rem;">💡 Таблицата е широка — скролни хоризонтално (наляво/надясно) в кутията по-долу, ако не виждаш всички колони.</p>
-      <div class="card" style="overflow-x:auto;display:none;" id="ordersTableWrap">
-        <table class="orders-table">
-          <thead><tr>
-            <th>Дата</th><th>Клиент</th><th style="color:var(--accent);">Покана за ревю</th><th>Имейл</th><th>Телефон</th><th>Доставка</th><th>Продукти</th><th>Сума</th><th>Статус</th><th>Действия</th>
-          </tr></thead>
-          <tbody id="ordersBody"></tbody>
-        </table>
+      <div id="ordersTableWrap" style="display:none;">
+        <div id="ordersBody"></div>
       </div>
     </div>
 
@@ -601,7 +610,10 @@
           '<div class="img-slot-label">' + label + '</div>' +
           '<div class="img-preview" id="imgPreview-' + idx + '-' + slot + '">' + previewInner + '</div>' +
           '<input type="file" accept="image/*" id="imgFile-' + idx + '-' + slot + '" onchange="uploadProductImage(' + idx + ',\'' + slot + '\',this)" />' +
-          '<button type="button" class="small-btn img-upload-btn" onclick="document.getElementById(\'imgFile-' + idx + '-' + slot + '\').click()">📤</button>' +
+          '<div class="img-slot-btns">' +
+            '<button type="button" class="small-btn img-upload-btn" onclick="document.getElementById(\'imgFile-' + idx + '-' + slot + '\').click()" title="Качи снимка">📤</button>' +
+            '<button type="button" class="small-btn img-remove-btn" onclick="removeProductImage(' + idx + ',\'' + slot + '\')" title="Премахни снимката">✕</button>' +
+          '</div>' +
         '</div>';
       }).join('') + '</div>';
 
@@ -758,6 +770,64 @@
     });
   }
 
+  // GET (взима sha) + DELETE - връща {ok:false, notFound:true} ако файлът
+  // изобщо не съществува на този път (нищо за трием, не е грешка).
+  async function deleteImageFromGithub_(destPath) {
+    return queueGitHubSave(async function() {
+      try {
+        var sha = null;
+        try {
+          var getRes = await fetch('https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + destPath, {
+            headers: { 'Authorization': 'token ' + GITHUB_TOKEN, 'Accept': 'application/vnd.github.v3+json' }
+          });
+          if (getRes.ok) { var getData = await getRes.json(); sha = getData.sha; }
+        } catch (e) { /* файлът вероятно не съществува */ }
+        if (!sha) return { ok: false, notFound: true };
+
+        var res = await fetch('https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + destPath, {
+          method: 'DELETE',
+          headers: { 'Authorization': 'token ' + GITHUB_TOKEN, 'Accept': 'application/vnd.github.v3+json', 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: 'Admin: премахната снимка ' + destPath, sha: sha })
+        });
+        var data = await res.json();
+        if (!res.ok) return { ok: false, message: data.message || ('HTTP ' + res.status) };
+        return { ok: true };
+      } catch (e) {
+        return { ok: false, message: e.message || String(e) };
+      }
+    });
+  }
+
+  // Премахва снимка с един клик: трие реалния файл от GitHub (за галерийните
+  // слотове това е задължително, защото cart.js разпознава коя снимка да
+  // покаже само по това дали файлът физически съществува на очаквания път -
+  // не по поле в products.json), и за главната снимка допълнително изчиства
+  // полето imageMain, за да спре да се ползва.
+  async function removeProductImage(idx, slot) {
+    var p = products[idx];
+    var isMain = (slot === 'main');
+    var destPath = isMain ? (p.imageMain && p.imageMain.trim()) : ((p.imagePrefix && p.imagePrefix.trim()) ? p.imagePrefix.trim() + '.' + slot + '.jpg' : '');
+    if (!destPath) {
+      toast('Няма качена снимка в този слот.', 'error');
+      return;
+    }
+    if (!confirm('Сигурен ли си, че искаш да премахнеш тази снимка? Файлът ще бъде изтрит и от GitHub - необратимо.')) return;
+
+    toast('Премахване на снимката...', 'success');
+    var result = await deleteImageFromGithub_(destPath);
+    if (!result.ok && !result.notFound) {
+      toast('Грешка при премахване: ' + result.message, 'error');
+      return;
+    }
+
+    var previewKey = p.id || ('idx' + idx);
+    delete productImgPreviews[previewKey + '_' + slot];
+    if (isMain) products[idx].imageMain = '';
+
+    renderProductsList();
+    toast('Снимката е премахната! Не забравяй да натиснеш "💾 Запази промените" горе.', 'success');
+  }
+
   async function uploadProductImage(idx, slot, inputEl) {
     var file = inputEl.files && inputEl.files[0];
     if (!file) return;
@@ -903,52 +973,55 @@
     }
   }
 
+  function esc(s) {
+    return String(s || '').replace(/'/g, "\\'").replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function statusClass(status) {
+    if (status === 'Отказана') return 'status-cancelled';
+    if (status === 'Без отговор') return 'status-noresponse';
+    if (status === 'Нова' || !status) return 'status-new';
+    return 'status-other';
+  }
+
   function renderOrders(orders) {
     document.getElementById('ordersLoading').style.display = 'none';
     document.getElementById('ordersTableWrap').style.display = 'block';
     var body = document.getElementById('ordersBody');
     if (!orders.length) {
-      body.innerHTML = '<tr><td colspan="10" style="text-align:center;color:var(--muted);padding:2rem;">Няма поръчки</td></tr>';
+      body.innerHTML = '<p class="loading-note">Няма поръчки</p>';
       return;
     }
     body.innerHTML = orders.slice().reverse().map(function(o) {
       var orderId = o.id || (o.date + o.phone);
-      var reviewCell = '';
-      if (o.reviewLeft) {
-        reviewCell = '<span style="color:var(--success);font-size:0.72rem;">✓ Оставил ревю</span>';
-      } else if (o.email) {
-        var invited = o.reviewInvited;
-        reviewCell = '<button id="invite-btn-' + orderId + '" class="small-btn" style="' + (invited ? 'border-color:var(--success);color:var(--success);' : '') + '" onclick="sendReviewInvite(\'' + orderId + '\',\'' + o.email + '\',\'' + (o.name||'').replace(/'/g,"\\'") + '\')">' + (invited ? '✓ Поканен' : '✉ Покани') + '</button>';
-      } else {
-        reviewCell = '<span style="color:var(--muted);font-size:0.68rem;">Няма мейл</span>';
-      }
-      var isCancelled = (o.status || 'Нова') === 'Отказана';
-      var isNoResponse = (o.status || 'Нова') === 'Без отговор';
+      var status = o.status || 'Нова';
+      var isCancelled = status === 'Отказана';
+      var isNoResponse = status === 'Без отговор';
       var isClosed = isCancelled || isNoResponse;
-      var actionsCell =
-        '<div style="display:flex;flex-direction:column;gap:0.4rem;">' +
-          (!isClosed
-            ? '<button class="small-btn" style="border-color:var(--danger,#e05252);color:var(--danger,#e05252);" onclick="adminCancelOrder(\'' + orderId + '\',\'' + (o.name||'').replace(/'/g,"\\'") + '\')">Откажи</button>'
-            : '') +
-          (isCancelled ? '<span style="color:var(--danger,#e05252);font-size:0.72rem;">✕ Отказана</span>' : '') +
-          (isNoResponse ? '<span style="color:var(--muted);font-size:0.72rem;">☎ Без отговор</span>' : '') +
-          (!isClosed
-            ? '<button class="small-btn" style="border-color:var(--muted);color:var(--muted);" onclick="adminSilentCancelOrder(\'' + orderId + '\',\'' + (o.name||'').replace(/'/g,"\\'") + '\')" title="Само за теб - клиентът НЕ получава известие, имейлът му се трие">☎ Без отговор</button>'
-            : '') +
-          '<button class="small-btn" style="border-color:var(--danger,#e05252);color:var(--danger,#e05252);" onclick="adminDeleteOrder(\'' + orderId + '\',\'' + (o.name||'').replace(/'/g,"\\'") + '\')">🗑 Изтрий</button>' +
-        '</div>';
-      return '<tr>' +
-        '<td>' + (o.date||'—') + '<br><small style="color:var(--muted)">' + (o.time||'') + '</small></td>' +
-        '<td>' + (o.name||'—') + '</td>' +
-        '<td>' + reviewCell + '</td>' +
-        '<td style="font-size:0.75rem;">' + (o.email||'—') + '</td>' +
-        '<td>' + (o.phone||'—') + '</td>' +
-        '<td>' + (o.courier||'—') + '<br><small style="color:var(--muted)">' + (o.city||'') + ' · ' + (o.office||'') + '</small></td>' +
-        '<td><div class="order-items-list">' + (o.products||'') + '</div></td>' +
-        '<td style="color:var(--accent)">' + (o.totalEur||'—') + '<br><small>' + (o.totalBgn||'') + '</small></td>' +
-        '<td' + (isCancelled ? ' style="color:var(--danger,#e05252);"' : (isNoResponse ? ' style="color:var(--muted);"' : '')) + '>' + (o.status||'Нова') + '</td>' +
-        '<td>' + actionsCell + '</td>' +
-      '</tr>';
+
+      var actions = '<div class="order-btn-row">';
+      if (!isClosed) {
+        actions += '<button class="small-btn danger" style="border-color:var(--danger);color:var(--danger);" onclick="adminCancelOrder(\'' + orderId + '\',\'' + esc(o.name) + '\')">Откажи</button>';
+        actions += '<button class="small-btn" onclick="adminSilentCancelOrder(\'' + orderId + '\',\'' + esc(o.name) + '\')" title="Само за теб - клиентът НЕ получава известие, имейлът му се трие">☎ Без отговор</button>';
+      }
+      if (o.email && !o.reviewLeft) {
+        var invited = o.reviewInvited;
+        actions += '<button id="invite-btn-' + orderId + '" class="small-btn" style="' + (invited ? 'border-color:var(--success);color:var(--success);' : 'border-color:var(--accent2);color:var(--accent2);') + '" onclick="sendReviewInvite(\'' + orderId + '\',\'' + esc(o.email) + '\',\'' + esc(o.name) + '\')">' + (invited ? '✓ Поканен' : '✉ Покани') + '</button>';
+      }
+      actions += '</div>' +
+        '<button class="small-btn danger" style="border-color:var(--danger);color:var(--danger);width:100%;margin-top:8px;" onclick="adminDeleteOrder(\'' + orderId + '\',\'' + esc(o.name) + '\')">🗑 Изтрий</button>';
+
+      return '<div class="order-card">' +
+        '<div class="order-top"><span class="order-name">' + esc(o.name || '—') + '</span><span class="order-total">' + (o.totalEur || '—') + (o.totalBgn ? ' · ' + esc(o.totalBgn) : '') + '</span></div>' +
+        '<div class="order-meta">' +
+          '📞 ' + esc(o.phone || '—') + (o.email ? ' · ✉ ' + esc(o.email) : ' · ✉ Няма мейл') + '<br>' +
+          '📦 ' + esc(o.courier || '—') + ' · ' + esc(o.city || '') + (o.office ? ' · ' + esc(o.office) : '') + '<br>' +
+          '🕒 ' + esc(o.date || '') + ' ' + esc(o.time || '') + ' · <span class="status-pill ' + statusClass(status) + '">' + esc(status) + '</span>' +
+          (o.reviewLeft ? ' · <span style="color:var(--success);">✓ ревю</span>' : '') +
+        '</div>' +
+        '<div class="order-items">' + esc(o.products || '') + '</div>' +
+        actions +
+      '</div>';
     }).join('');
   }
 
