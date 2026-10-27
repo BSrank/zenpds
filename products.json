@@ -188,7 +188,7 @@
           ]
         }
       ],
-      "active": false,
+      "active": true,
       "isNewListing": false
     },
     {
@@ -224,7 +224,7 @@
           ]
         }
       ],
-      "active": false,
+      "active": true,
       "isNewListing": false
     },
     {
@@ -259,7 +259,7 @@
           ]
         }
       ],
-      "active": false,
+      "active": true,
       "isNewListing": false
     },
     {
@@ -295,7 +295,7 @@
           ]
         }
       ],
-      "active": false,
+      "active": true,
       "isNewListing": false
     }
   ],
