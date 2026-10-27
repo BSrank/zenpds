@@ -259,8 +259,8 @@
           ]
         }
       ],
-      "active": true,
-      "isNewListing": true
+      "active": false,
+      "isNewListing": false
     },
     {
       "id": "adapter17-35w",
@@ -295,8 +295,8 @@
           ]
         }
       ],
-      "active": true,
-      "isNewListing": true
+      "active": false,
+      "isNewListing": false
     }
   ],
   "settings": {
