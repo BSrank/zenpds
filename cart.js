@@ -12,6 +12,40 @@ let SITE_PRODUCTS = [];
 let SITE_SETTINGS = {};
 let PRODUCT_IMAGES = {};
 
+// ==================== КАТЕГОРИИ (продукти/products.html) ====================
+// Продуктите без изрично зададена категория в admin панела се третират като
+// "headphones" (обратна съвместимост - всички вече съществуващи продукти са
+// слушалки). Винаги при отваряне/презареждане на products.html подразбиращата
+// се категория е "headphones" - по изрично желание ("винаги като цъкнат на
+// продукти да е зададено на слушалки"), не се помни последният избор.
+const PRODUCT_CATEGORIES = [
+    { id: 'headphones', label: 'Слушалки' },
+    { id: 'chargers', label: 'Зарядни' },
+    { id: 'all', label: 'Всички' }
+];
+let ACTIVE_CATEGORY = 'headphones';
+
+function renderCategoryTabs() {
+    const wrap = document.getElementById('categoryTabs');
+    if (!wrap) return;
+    wrap.style.cssText = 'display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:0 0 2rem;';
+    wrap.innerHTML = PRODUCT_CATEGORIES.map(cat => {
+        const active = cat.id === ACTIVE_CATEGORY;
+        const style = active
+            ? 'background:var(--accent,#2563eb);color:#fff;border-color:var(--accent,#2563eb);'
+            : 'background:none;color:var(--text-light,#999);border-color:var(--border,#2a2a2a);';
+        return '<button type="button" class="category-tab" data-category="' + cat.id + '" ' +
+            'style="padding:9px 22px;border-radius:30px;border:1px solid;cursor:pointer;font-family:inherit;font-size:0.88rem;letter-spacing:0.02em;transition:all 0.2s;' + style + '">' +
+            cat.label +
+        '</button>';
+    }).join('');
+}
+
+function filteredProducts() {
+    if (ACTIVE_CATEGORY === 'all') return SITE_PRODUCTS;
+    return SITE_PRODUCTS.filter(p => (p.category || 'headphones') === ACTIVE_CATEGORY);
+}
+
 async function loadSiteData() {
     // До 3 опита - ако products.json временно не се зареди (напр. GitHub Pages
     // CDN-ът все още не е "разпространил" наскоро добавен файл до всички сървъри),
@@ -49,8 +83,7 @@ async function loadSiteData() {
         }
     }
     // И трите опита се провалиха - оставяме SITE_PRODUCTS празен. renderProductsGrid()
-    // и renderProductsPreview() НЕ пипат HTML-а в този случай (виж техния код по-долу),
-    // така че статичният fallback в самия HTML остава видим за посетителите.
+    // и renderProductsPreview() НЕ пипат HTML-а в този случай (виж техния код по-долу).
     SITE_PRODUCTS = [];
     SITE_SETTINGS = {};
 }
@@ -59,7 +92,36 @@ function findProduct(id) {
     return SITE_PRODUCTS.find(p => p.id === id);
 }
 
+// ==================== ВАРИАНТИ (напр. "Дължина": 1м/2м с различна цена) ====================
+// Изключени по подразбиране за всеки продукт - p.variantGroup е undefined/null,
+// освен ако собственикът изрично не ги включи за конкретна обява от admin панела.
+// Когато ги няма, продуктът се държи точно както преди (фиксирана p.price).
+function hasVariants(product) {
+    return !!(product && product.variantGroup && Array.isArray(product.variantGroup.options) && product.variantGroup.options.length);
+}
+
+function cheapestVariantPrice(product) {
+    return Math.min.apply(null, product.variantGroup.options.map(o => Number(o.price) || 0));
+}
+
+function renderVariantSelectorHTML(product) {
+    const vg = product.variantGroup;
+    const optionsHTML = vg.options.map((opt, i) =>
+        '<option value="' + i + '">' + (opt.label || ('Вариант ' + (i + 1))) + ' — €' + (Number(opt.price) || 0).toFixed(2) + '</option>'
+    ).join('');
+    return '<div class="variant-selector" style="margin:10px 0;">' +
+        '<label style="display:block;font-size:0.82rem;color:var(--text-light);margin-bottom:6px;">' + (vg.label || 'Вариант') + ':</label>' +
+        '<select class="variant-select" id="variant-' + product.id + '" data-product="' + product.id + '" ' +
+            'style="width:100%;padding:9px 11px;background:#1a1a1a;border:1px solid var(--border);color:var(--text);border-radius:8px;font-family:inherit;font-size:0.88rem;outline:none;">' +
+            optionsHTML +
+        '</select>' +
+    '</div>';
+}
+
 function formatPriceHTML(product) {
+    if (hasVariants(product)) {
+        return 'от €' + cheapestVariantPrice(product).toFixed(2);
+    }
     // Цената се показва само в евро - без "(X лв)" по изричен избор.
     const hasDiscount = product.comparePrice && product.comparePrice > product.price;
     const eur = '€' + Number(product.price).toFixed(2);
@@ -71,6 +133,7 @@ function formatPriceHTML(product) {
 // ==================== DYNAMIC RENDERING (index.html / products.html) ====================
 function renderDynamicContent() {
     renderProductsPreview();
+    renderCategoryTabs();
     renderProductsGrid();
     renderReviewsSection();
     renderContactSections();
@@ -83,8 +146,8 @@ function renderProductsPreview() {
     // ВАЖНО: ако products.json не се е заредил (мрежова грешка, или GitHub Pages
     // все още не е "разпространил" файла до всички CDN сървъри - това се случва
     // за кратко след добавяне на НОВ файл в repo-то), SITE_PRODUCTS ще е празен.
-    // В такъв случай НЕ пипаме грида изобщо - оставяме статичния fallback от
-    // HTML-а (виж index.html), вместо да го изтрием и страницата да "опустее".
+    // В такъв случай НЕ пипаме грида изобщо, вместо да го изтрием и страницата
+    // да "опустее".
     if (!SITE_PRODUCTS.length) return;
     grid.innerHTML = SITE_PRODUCTS.map(p => {
         const featuresHTML = (p.previewFeatures || []).map(f => '<li>' + f + '</li>').join('');
@@ -108,7 +171,12 @@ function renderProductsGrid() {
     if (!grid) return;
     // Виж коментара в renderProductsPreview() по-горе - същата защита тук.
     if (!SITE_PRODUCTS.length) return;
-    grid.innerHTML = SITE_PRODUCTS.map(p => {
+    const visibleProducts = filteredProducts();
+    if (!visibleProducts.length) {
+        grid.innerHTML = '<p style="text-align:center;color:var(--text-light);grid-column:1/-1;padding:2rem 0;">Няма продукти в тази категория засега.</p>';
+        return;
+    }
+    grid.innerHTML = visibleProducts.map(p => {
         const sectionsHTML = (p.sections || []).map(sec =>
             '<h3>' + sec.title + '</h3><ul>' + (sec.items || []).map(it => '<li>' + it + '</li>').join('') + '</ul>'
         ).join('');
@@ -119,8 +187,9 @@ function renderProductsGrid() {
             '</div>' +
             '<div class="product-info">' +
                 '<h2 class="product-title">' + p.name + '</h2>' +
-                '<p class="product-price">' + formatPriceHTML(p) + '</p>' +
+                '<p class="product-price" id="price-' + p.id + '">' + (hasVariants(p) ? ('€' + (Number(p.variantGroup.options[0].price) || 0).toFixed(2)) : formatPriceHTML(p)) + '</p>' +
                 '<div class="product-features">' + sectionsHTML + '</div>' +
+                (hasVariants(p) ? renderVariantSelectorHTML(p) : '') +
                 '<div class="product-actions">' +
                     '<div class="quantity-selector">' +
                         '<button class="qty-btn minus" data-product="' + p.id + '">-</button>' +
@@ -461,6 +530,11 @@ function setupEventListeners() {
         if (e.target.classList && e.target.classList.contains('qty-btn')) {
             handleQuantityChange(e);
         }
+        if (e.target.classList && e.target.classList.contains('category-tab')) {
+            ACTIVE_CATEGORY = e.target.dataset.category;
+            renderCategoryTabs();
+            renderProductsGrid();
+        }
     });
 
     // Quantity inputs (делегирано, тъй като полетата се създават динамично)
@@ -471,6 +545,17 @@ function setupEventListeners() {
                 e.target.value = 1;
             } else if (value > 99) {
                 e.target.value = 99;
+            }
+        }
+        // Избор на вариант (напр. дължина/цвят) - обновяваме показваната цена
+        // веднага, преди клиентът да добави в количката.
+        if (e.target.classList && e.target.classList.contains('variant-select')) {
+            const productId = e.target.dataset.product;
+            const product = findProduct(productId);
+            const priceEl = document.getElementById('price-' + productId);
+            if (product && priceEl) {
+                const opt = product.variantGroup.options[parseInt(e.target.value)];
+                if (opt) priceEl.textContent = '€' + (Number(opt.price) || 0).toFixed(2);
             }
         }
     });
@@ -525,20 +610,39 @@ function handleQuantityChange(e) {
 function handleAddToCart(e) {
     const btn = e.target;
     const productId = btn.dataset.product;
-    const productName = btn.dataset.name;
-    const productPrice = parseFloat(btn.dataset.price);
+    const product = findProduct(productId);
     const qtyInput = document.getElementById(`qty-${productId}`);
     const quantity = qtyInput ? parseInt(qtyInput.value) : 1;
 
-    const existingItem = cart.find(item => item.id === productId);
+    // По подразбиране: продуктът си няма варианти (старото поведение, без
+    // промяна) - име/цена идват директно от бутона, точно както досега.
+    let itemId = productId;
+    let itemName = btn.dataset.name;
+    let itemPrice = parseFloat(btn.dataset.price);
+
+    // Ако продуктът има включени варианти (напр. "Дължина") - реалните
+    // име/цена идват от ИЗБРАНИЯ вариант, а не от фиксираните data-* атрибути
+    // на бутона. Различните варианти на един продукт се третират като
+    // отделни редове в количката (съставен id), за да не се събират в едно.
+    if (product && hasVariants(product)) {
+        const select = document.getElementById('variant-' + productId);
+        const variantIdx = select ? parseInt(select.value) : 0;
+        const opt = product.variantGroup.options[variantIdx];
+        if (!opt) return;
+        itemId = productId + '__v' + variantIdx;
+        itemName = product.name + ' (' + (opt.label || ('Вариант ' + (variantIdx + 1))) + ')';
+        itemPrice = Number(opt.price) || 0;
+    }
+
+    const existingItem = cart.find(item => item.id === itemId);
 
     if (existingItem) {
         existingItem.quantity += quantity;
     } else {
         cart.push({
-            id: productId,
-            name: productName,
-            price: productPrice,
+            id: itemId,
+            name: itemName,
+            price: itemPrice,
             quantity: quantity
         });
     }
