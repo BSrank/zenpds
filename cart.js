@@ -59,46 +59,81 @@ function filteredProducts() {
     });
 }
 
-async function loadSiteData() {
-    // До 3 опита - ако products.json временно не се зареди (напр. GitHub Pages
-    // CDN-ът все още не е "разпространил" наскоро добавен файл до всички сървъри),
-    // изчакваме малко и опитваме пак, вместо веднага да се предадем.
+const SITE_CACHE_KEY = 'zen_site_cache_v1';
+
+// Прилага заредени данни от products.json. Връща true, ако има видими продукти.
+function applySiteData(data) {
+    const settings = data.settings || {};
+    // "Нови обяви" (isNewListing:true) са скрити от сайта, докато собственикът
+    // не включи settings.showNewListings от admin панела.
+    const showNewListings = settings.showNewListings === true;
+    const products = (data.products || []).filter(function(p) {
+        return p.active !== false && (!p.isNewListing || showNewListings);
+    });
+    if (!products.length) return false;
+    SITE_PRODUCTS = products;
+    SITE_SETTINGS = settings;
+    // PRODUCT_IMAGES се строи динамично от products.json.
+    PRODUCT_IMAGES = {};
+    SITE_PRODUCTS.forEach(p => {
+        PRODUCT_IMAGES[p.id] = { main: p.imageMain, prefix: p.imagePrefix };
+    });
+    return true;
+}
+
+// Вземане на свежия products.json (до 3 опита - GitHub Pages CDN понякога
+// закъснява с нов файл). Връща суровия текст или null.
+async function fetchSiteDataText() {
     const MAX_ATTEMPTS = 3;
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
         try {
             const res = await fetch('products.json?t=' + Date.now());
             if (!res.ok) throw new Error('HTTP ' + res.status);
-            const data = await res.json();
-            const settings = data.settings || {};
-            // "Нови обяви" (isNewListing:true) са скрити от сайта, докато собственикът
-            // не включи settings.showNewListings от admin панела - позволява да се
-            // подготви продукт напълно (снимки, описание, цена), преди да е публичен.
-            const showNewListings = settings.showNewListings === true;
-            const products = (data.products || []).filter(function(p) {
-                return p.active !== false && (!p.isNewListing || showNewListings);
-            });
-            if (!products.length) throw new Error('products.json е празен');
-
-            SITE_PRODUCTS = products;
-            SITE_SETTINGS = settings;
-
-            // PRODUCT_IMAGES се строи динамично от products.json, вместо да е хардкоднато.
-            PRODUCT_IMAGES = {};
-            SITE_PRODUCTS.forEach(p => {
-                PRODUCT_IMAGES[p.id] = { main: p.imageMain, prefix: p.imagePrefix };
-            });
-            return; // успех
+            const text = await res.text();
+            const data = JSON.parse(text);
+            if (!applySiteData(data)) throw new Error('products.json е празен');
+            return text;
         } catch (e) {
             console.error('Грешка при зареждане на products.json (опит ' + attempt + '/' + MAX_ATTEMPTS + '):', e);
-            if (attempt < MAX_ATTEMPTS) {
-                await new Promise(r => setTimeout(r, 1200));
-            }
+            if (attempt < MAX_ATTEMPTS) await new Promise(r => setTimeout(r, 1200));
         }
     }
-    // И трите опита се провалиха - оставяме SITE_PRODUCTS празен. renderProductsGrid()
-    // и renderProductsPreview() НЕ пипат HTML-а в този случай (виж техния код по-долу).
+    return null;
+}
+
+// "Покажи кеширано, обнови на заден план": при повторно посещение продуктите се
+// рисуват МИГНОВЕНО от кеша в браузъра (без да чакат мрежата), а свежият
+// products.json се тегли успоредно и страницата се обновява само ако има промяна.
+async function loadSiteData() {
+    let cachedRaw = null;
+    try { cachedRaw = localStorage.getItem(SITE_CACHE_KEY); } catch (e) {}
+    if (cachedRaw) {
+        try {
+            if (applySiteData(JSON.parse(cachedRaw))) {
+                refreshSiteDataInBackground(cachedRaw);
+                return;
+            }
+        } catch (e) { /* повреден кеш - продължаваме с мрежата */ }
+    }
+    const text = await fetchSiteDataText();
+    if (text) {
+        try { localStorage.setItem(SITE_CACHE_KEY, text); } catch (e) {}
+        return;
+    }
+    // Всички опити се провалиха - оставяме SITE_PRODUCTS празен. renderProductsGrid()
+    // и renderProductsPreview() НЕ пипат HTML-а в този случай.
     SITE_PRODUCTS = [];
     SITE_SETTINGS = {};
+}
+
+async function refreshSiteDataInBackground(previousRaw) {
+    const text = await fetchSiteDataText();   // прилага свежите данни при успех
+    if (!text) return;
+    try { localStorage.setItem(SITE_CACHE_KEY, text); } catch (e) {}
+    if (text !== previousRaw) {
+        // Има промяна (цена, продукт, категория...) - прерисуваме с новите данни.
+        try { renderDynamicContent(); loadProductImages(); loadPreviewImages(); } catch (e) { console.error(e); }
+    }
 }
 
 function findProduct(id) {
@@ -478,7 +513,7 @@ function displayProductImages(productId, images) {
                  style="background:#1a1a1a;" onclick="changeMainImage('${productId}', ${index})"></div>
         `).join('');
         images.forEach((src, index) => {
-            enqueueImage(src, (ok, loadedImg) => {
+            enqueueImage(thumbPath(src), src, (ok, loadedImg) => {
                 const slot = document.getElementById(`thumb-${productId}-${index}`);
                 if (!slot || !ok) return;
                 loadedImg.alt = 'Thumbnail ' + (index + 1);
@@ -501,8 +536,15 @@ const IMAGE_QUEUE = [];
 let imageLoadsActive = 0;
 const MAX_PARALLEL_IMAGE_LOADS = 2;
 
-function enqueueImage(src, onDone) {
-    IMAGE_QUEUE.push({ src, onDone });
+// Път до малката версия на снимка: "abc.jpg" -> "abc.t.jpg" (~15KB, 260px).
+// Генерира се автоматично от admin панела при качване. За по-стари снимки без
+// малка версия, onerror пада обратно към оригинала.
+function thumbPath(path) {
+    return String(path).replace(/\.[^./]+$/, '') + '.t.jpg';
+}
+
+function enqueueImage(src, fallbackSrc, onDone) {
+    IMAGE_QUEUE.push({ src, fallbackSrc, onDone });
     pumpImageQueue();
 }
 
@@ -513,8 +555,16 @@ function pumpImageQueue() {
         const img = new Image();
         img.decoding = 'async';
         const finish = (ok) => { imageLoadsActive--; try { task.onDone(ok, img); } catch (e) {} pumpImageQueue(); };
+        let triedFallback = false;
         img.onload = () => finish(true);
-        img.onerror = () => finish(false);
+        img.onerror = () => {
+            if (!triedFallback && task.fallbackSrc && task.fallbackSrc !== task.src) {
+                triedFallback = true;
+                img.src = task.fallbackSrc;
+            } else {
+                finish(false);
+            }
+        };
         img.src = task.src;
     }
 }
