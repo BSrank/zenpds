@@ -195,7 +195,9 @@ function renderProductsGrid() {
         ).join('');
         return '<div class="product-card" id="' + p.id + '">' +
             '<div class="product-image-section">' +
-                '<div class="product-image-main" id="mainImage-' + p.id + '"></div>' +
+                '<div class="product-image-main" id="mainImage-' + p.id + '">' +
+                    (p.imageMain ? '<img src="' + p.imageMain + '" alt="" fetchpriority="high" decoding="async" onclick="openLightbox(\'' + p.id + '\', 0)" onerror="this.remove()">' : '') +
+                '</div>' +
                 '<div class="product-thumbnails" id="thumbnails-' + p.id + '"></div>' +
             '</div>' +
             '<div class="product-info">' +
@@ -436,12 +438,16 @@ async function loadImagesForProduct(productId) {
 }
 
 function checkImageExists(imagePath) {
-    return new Promise((resolve) => {
-        const img = new Image();
-        img.onload = () => resolve(true);
-        img.onerror = () => resolve(false);
-        img.src = imagePath;
-    });
+    // HEAD заявка - не тегли самата снимка (те са ~1.5MB), само проверява дали
+    // файлът съществува. Преди проверката изтегляше ВСИЧКИ снимки целиком.
+    return fetch(imagePath, { method: 'HEAD' })
+        .then(r => r.ok)
+        .catch(() => new Promise((resolve) => {
+            const img = new Image();
+            img.onload = () => resolve(true);
+            img.onerror = () => resolve(false);
+            img.src = imagePath;
+        }));
 }
 
 function displayProductImages(productId, images) {
@@ -459,7 +465,7 @@ function displayProductImages(productId, images) {
         thumbnailsContainer.innerHTML = images.map((img, index) => `
             <div class="product-thumbnail ${index === 0 ? 'active' : ''}"
                  onclick="changeMainImage('${productId}', ${index})">
-                <img src="${img}" alt="Thumbnail ${index + 1}">
+                <img src="${img}" alt="Thumbnail ${index + 1}" loading="lazy" decoding="async">
             </div>
         `).join('');
     }
@@ -1025,12 +1031,14 @@ function loadCart() {
 
 // ==================== LOAD PREVIEW IMAGES (Homepage) ====================
 async function loadPreviewImages() {
-    for (const p of SITE_PRODUCTS) {
+    // Паралелно, директно зареждане - без последователно чакане по продукт.
+    SITE_PRODUCTS.forEach(p => {
         const preview = document.getElementById(`previewImage-${p.id}`);
-        if (!preview || !p.imageMain) continue;
-        const exists = await checkImageExists(p.imageMain);
-        if (exists) {
-            preview.innerHTML = `<img src="${p.imageMain}" alt="${p.name}">`;
-        }
-    }
+        if (!preview || !p.imageMain) return;
+        const img = new Image();
+        img.alt = p.name;
+        img.decoding = 'async';
+        img.onload = () => { preview.innerHTML = ''; preview.appendChild(img); };
+        img.src = p.imageMain;
+    });
 }
