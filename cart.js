@@ -1,23 +1,14 @@
-// ==================== GOOGLE SHEETS CONFIGURATION ====================
-// ВАЖНО: След като настроиш Google Sheets, замени с твоя Web App URL
-// Имейлът за нотификации е в Google Apps Script (private), не тук!
+ 
 const GOOGLE_SHEETS_CONFIG = {
     webAppUrl: 'https://script.google.com/macros/s/AKfycbzKj9ttuvCMJFF3DJuPBry15BuiLkWzLku2NwDDbtZS7oZ5jgHtQp1jl2d9bertHYYn/exec' // Замени с URL от Google Apps Script Deploy
 };
 
-// ==================== ПРОДУКТИ / НАСТРОЙКИ (от products.json) ====================
-// Продуктите, ревютата и контактният режим вече идват от products.json (управлява
-// се от admin.html), вместо да са хардкоднати в index.html / products.html.
+ 
 let SITE_PRODUCTS = [];
 let SITE_SETTINGS = {};
 let PRODUCT_IMAGES = {};
 
-// ==================== КАТЕГОРИИ (продукти/products.html) ====================
-// Продуктите без изрично зададена категория в admin панела се третират като
-// "headphones" (обратна съвместимост - всички вече съществуващи продукти са
-// слушалки). Винаги при отваряне/презареждане на products.html подразбиращата
-// се категория е "headphones" - по изрично желание ("винаги като цъкнат на
-// продукти да е зададено на слушалки"), не се помни последният избор.
+ 
 const PRODUCT_CATEGORIES = [
     { id: 'headphones', label: 'Слушалки' },
     { id: 'chargers', label: 'Зарядни' },
@@ -92,10 +83,7 @@ function findProduct(id) {
     return SITE_PRODUCTS.find(p => p.id === id);
 }
 
-// ==================== ВАРИАНТИ (напр. "Дължина": 1м/2м с различна цена) ====================
-// Изключени по подразбиране за всеки продукт - p.variantGroup е undefined/null,
-// освен ако собственикът изрично не ги включи за конкретна обява от admin панела.
-// Когато ги няма, продуктът се държи точно както преди (фиксирана p.price).
+ 
 function hasVariants(product) {
     return !!(product && product.variantGroup && Array.isArray(product.variantGroup.options) && product.variantGroup.options.length);
 }
@@ -138,16 +126,11 @@ function renderDynamicContent() {
     renderReviewsSection();
     renderContactSections();
 }
-
-// ---- Начало: preview grid ----
+ -
 function renderProductsPreview() {
     const grid = document.getElementById('productsPreviewGrid');
     if (!grid) return;
-    // ВАЖНО: ако products.json не се е заредил (мрежова грешка, или GitHub Pages
-    // все още не е "разпространил" файла до всички CDN сървъри - това се случва
-    // за кратко след добавяне на НОВ файл в repo-то), SITE_PRODUCTS ще е празен.
-    // В такъв случай НЕ пипаме грида изобщо, вместо да го изтрием и страницата
-    // да "опустее".
+ 
     if (!SITE_PRODUCTS.length) return;
     grid.innerHTML = SITE_PRODUCTS.map(p => {
         const featuresHTML = (p.previewFeatures || []).map(f => '<li>' + f + '</li>').join('');
@@ -238,12 +221,7 @@ function renderReviewsSection() {
     ).join('');
 
     if (showClient) {
-        // ВАЖНО: реалните клиентски ревюта НЕ се четат от Apps Script при всяко
-        // зареждане на страницата (това беше бавно - Apps Script "cold start" +
-        // 302 пренасочване можеше да отнеме секунди). Вместо това, при всяко
-        // одобрение на ревю от admin панела, ревюто се кешира директно в
-        // products.json (settings.clientReviews) и се качва в GitHub - оттам
-        // насетне идва мигновено, заедно с продуктите, през GitHub Pages CDN.
+      
         const remainingSlots = Math.max(0, HOMEPAGE_REVIEWS_LIMIT - shownManual.length);
         const clientReviews = (SITE_SETTINGS.clientReviews || []).slice(0, remainingSlots);
         clientReviews.forEach(r => {
@@ -271,9 +249,7 @@ function renderContactSections() {
 function renderContactBlock(containerId) {
     const el = document.getElementById(containerId);
     if (!el) return;
-
-    // Начална страница: винаги линк към contact-form.html отгоре, телефон под него -
-    // фиксирано, независимо от contactMode (вариант А, избран вместо вградена форма).
+ 
     if (containerId === 'contactDynamic') {
         const phone = SITE_SETTINGS.phone || '0876 127 997';
         el.innerHTML =
@@ -338,8 +314,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     loadPreviewImages();
 });
 
-// ==================== PRODUCT IMAGE LOADING ====================
-function loadProductImages() {
+ function loadProductImages() {
     // Load images for each product
     Object.keys(PRODUCT_IMAGES).forEach(productId => {
         loadImagesForProduct(productId);
@@ -614,16 +589,12 @@ function handleAddToCart(e) {
     const qtyInput = document.getElementById(`qty-${productId}`);
     const quantity = qtyInput ? parseInt(qtyInput.value) : 1;
 
-    // По подразбиране: продуктът си няма варианти (старото поведение, без
-    // промяна) - име/цена идват директно от бутона, точно както досега.
+ 
     let itemId = productId;
     let itemName = btn.dataset.name;
     let itemPrice = parseFloat(btn.dataset.price);
 
-    // Ако продуктът има включени варианти (напр. "Дължина") - реалните
-    // име/цена идват от ИЗБРАНИЯ вариант, а не от фиксираните data-* атрибути
-    // на бутона. Различните варианти на един продукт се третират като
-    // отделни редове в количката (съставен id), за да не се събират в едно.
+ 
     if (product && hasVariants(product)) {
         const select = document.getElementById('variant-' + productId);
         const variantIdx = select ? parseInt(select.value) : 0;
@@ -909,11 +880,7 @@ async function handleCheckout(e) {
     submitBtn.textContent = 'Изпращане...';
 
     try {
-        // ВАЖНО: тук ЧАКАМЕ (await) реалния отговор от Google Apps Script -
-        // за разлика от преди, вече не можем да сме "fire and forget", защото
-        // трябва да сме сигурни, че промокодът реално е бил приложен (и да
-        // покажем грешка на клиента, ако нещо се провали), преди да изчистим
-        // количката и да покажем съобщение за успех.
+    
         const result = await sendToGoogleSheets(orderData);
         if (!result || result.success !== true) {
             throw new Error('Сървърът не потвърди поръчката.');
