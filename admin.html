@@ -920,6 +920,34 @@
     toast('Снимката е премахната! Не забравяй да натиснеш "💾 Запази промените" горе.', 'success');
   }
 
+  // Смаля и компресира снимката в браузъра преди качване (макс. 1600px по
+  // по-дългата страна, JPEG ~85%). Типично 1.5MB -> 150-300KB, без видима разлика
+  // - най-голямото ускорение на зареждането на сайта. Ако резултатът не е по-малък,
+  // се качва оригиналът.
+  function compressImage_(file) {
+    return new Promise(function(resolve) {
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function() {
+        try {
+          var max = 1600, w = img.naturalWidth, h = img.naturalHeight;
+          var scale = Math.min(1, max / Math.max(w, h));
+          var canvas = document.createElement('canvas');
+          canvas.width = Math.round(w * scale); canvas.height = Math.round(h * scale);
+          var ctx = canvas.getContext('2d');
+          ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob(function(blob) {
+            URL.revokeObjectURL(url);
+            resolve(blob && blob.size < file.size ? blob : file);
+          }, 'image/jpeg', 0.85);
+        } catch (e) { URL.revokeObjectURL(url); resolve(file); }
+      };
+      img.onerror = function() { URL.revokeObjectURL(url); resolve(file); };
+      img.src = url;
+    });
+  }
+
   async function uploadProductImage(idx, slot, inputEl) {
     var file = inputEl.files && inputEl.files[0];
     if (!file) return;
@@ -947,8 +975,7 @@
       // Ако вече има зададен файл за главната снимка - качваме НА СЪЩОТО място
       // (презаписваме), за да не чупим вече съществуваща конфигурация. Иначе
       // генерираме нов, разбираем път на база ID на продукта.
-      var ext = (file.name && file.name.match(/\.[a-zA-Z0-9]+$/)) ? file.name.match(/\.[a-zA-Z0-9]+$/)[0].toLowerCase() : '.jpg';
-      destPath = (p.imageMain && p.imageMain.trim()) ? p.imageMain.trim() : ('products/' + p.id.trim() + '/main' + ext);
+      destPath = (p.imageMain && p.imageMain.trim()) ? p.imageMain.trim() : ('products/' + p.id.trim() + '/main.jpg');
     } else {
       // Галерийните снимки трябва да са точно "{prefix}.{N}.jpg" - cart.js
       // проверява само това разширение (виж loadImagesForProduct в cart.js).
@@ -956,7 +983,10 @@
       destPath = prefix + '.' + slot + '.jpg';
     }
 
-    var result = await uploadImageToGithub_(file, destPath);
+    // Компресираме само когато пътят е .jpg/.jpeg (съдържанието е JPEG); за
+    // други разширения (напр. съществуваща главна .png) качваме оригинала.
+    var toUpload = /\.jpe?g$/i.test(destPath) ? await compressImage_(file) : file;
+    var result = await uploadImageToGithub_(toUpload, destPath);
     if (!result.ok) {
       toast('Грешка при качване: ' + result.message, 'error');
       inputEl.value = '';
