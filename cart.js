@@ -341,15 +341,32 @@ let currentLightboxImages = [];
 let currentLightboxIndex = 0;
 
 // Load cart from localStorage on page load
-window.addEventListener('DOMContentLoaded', async () => {
-    loadCart();
-    updateCartUI();
+async function initSite() {
+    try { loadCart(); } catch (e) { console.error('loadCart:', e); cart = []; }
+    try { updateCartUI(); } catch (e) { console.error('updateCartUI:', e); }
     await loadSiteData();
-    renderDynamicContent();
-    setupEventListeners();
-    loadProductImages();
-    loadPreviewImages();
-});
+    // Всяка стъпка е изолирана - грешка в една не спира останалите.
+    [renderProductsPreview, renderCategoryTabs, renderProductsGrid, renderReviewsSection, renderContactSections].forEach(fn => {
+        try { fn(); } catch (e) {
+            console.error('Грешка в ' + fn.name + ':', e);
+            const grid = document.getElementById('productsGrid');
+            if (grid && !grid.innerHTML.trim()) {
+                grid.innerHTML = '<p style="text-align:center;color:#e05252;grid-column:1/-1;padding:2rem 0;">Грешка при зареждане (' + fn.name + '): ' + (e && e.message) + '</p>';
+            }
+        }
+    });
+    try { setupEventListeners(); } catch (e) { console.error('setupEventListeners:', e); }
+    try { loadProductImages(); } catch (e) { console.error('loadProductImages:', e); }
+    try { loadPreviewImages(); } catch (e) { console.error('loadPreviewImages:', e); }
+}
+
+// Стартираме веднага, ако DOM-ът вече е зареден (скриптът може да се изпълни
+// след DOMContentLoaded - напр. при отложено зареждане от Cloudflare).
+if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', initSite);
+} else {
+    initSite();
+}
 
 // ==================== PRODUCT IMAGE LOADING ====================
 function loadProductImages() {
