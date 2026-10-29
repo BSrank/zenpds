@@ -171,6 +171,13 @@
         <button class="btn btn-ghost" onclick="loadData()">↻ Презареди</button>
         <button class="btn btn-primary" onclick="saveProducts()">💾 Запази промените</button>
       </div>
+      <div class="card" style="padding:1rem 1.2rem;">
+        <div style="display:flex;align-items:center;gap:0.8rem;flex-wrap:wrap;">
+          <button class="btn btn-ghost" id="optimizeBtn" onclick="optimizeAllImages()">🖼 Оптимизирай всички качени снимки</button>
+          <span style="font-size:0.72rem;color:var(--muted);">Смалява вече качените снимки (без да ги качваш наново) и прави малки миниатюри за бързо зареждане.</span>
+        </div>
+        <div id="optimizeStatus" style="font-size:0.78rem;margin-top:0.7rem;color:var(--muted);white-space:pre-line;display:none;"></div>
+      </div>
       <div id="productsList"></div>
       <button class="btn btn-ghost" style="margin-bottom:1.2rem;" onclick="addProduct()">+ Добави продукт</button>
       <p style="font-size:0.75rem;color:var(--muted);margin-top:0.5rem;">
@@ -907,6 +914,8 @@
 
     toast('Премахване на снимката...', 'success');
     var result = await deleteImageFromGithub_(destPath);
+    // Трием и малката версия (ако има такава) - без да е грешка, ако я няма.
+    try { await deleteImageFromGithub_(destPath.replace(/\.[^./]+$/, '') + '.t.jpg'); } catch (e) {}
     if (!result.ok && !result.notFound) {
       toast('Грешка при премахване: ' + result.message, 'error');
       return;
@@ -920,17 +929,94 @@
     toast('Снимката е премахната! Не забравяй да натиснеш "💾 Запази промените" горе.', 'success');
   }
 
+  // ─── Оптимизиране на ВЕЧЕ качени снимки (без ръчно повторно качване) ───
+  // За всеки продукт: главна снимка + {префикс}.N.jpg (N=1..12). Всяка се тегли
+  // от сайта, смалява се (1400px, JPEG 82%) и се презаписва на СЪЩИЯ път в GitHub
+  // (само ако печалбата е ясна - вече оптимизирани снимки не се пипат, за да няма
+  // загуба на качество). Освен това се създава малка версия "име.t.jpg" за
+  // миниатюрите, ако още я няма.
+  var optimizing_ = false;
+  function thumbPath_(path) { return String(path).replace(/\.[^./]+$/, '') + '.t.jpg'; }
+  function fmtMB_(b) { return (b / 1048576).toFixed(1) + ' MB'; }
+  async function urlExists_(url) {
+    try { var r = await fetch(url + (url.indexOf('?') === -1 ? '?' : '&') + 't=' + Date.now(), { method: 'HEAD' }); return r.ok; }
+    catch (e) { return false; }
+  }
+
+  async function optimizeAllImages() {
+    if (optimizing_) return;
+    if (!GITHUB_TOKEN) { toast('Няма GitHub токен - влез отново в панела.', 'error'); return; }
+    if (!confirm('Ще се оптимизират всички качени снимки на всички продукти.\n\n• Снимките се презаписват на същите места (имената не се променят)\n• Може да отнеме няколко минути - не затваряй страницата\n• Вече малките снимки не се пипат\n\nПродължи?')) return;
+
+    optimizing_ = true;
+    var btn = document.getElementById('optimizeBtn');
+    var status = document.getElementById('optimizeStatus');
+    btn.disabled = true; status.style.display = 'block';
+    var saved = 0, optimized = 0, thumbsMade = 0, skipped = 0, failed = 0, done = 0;
+
+    function show(msg) { status.textContent = msg + '\n\nОптимизирани: ' + optimized + ' · Миниатюри: ' + thumbsMade + ' · Пропуснати: ' + skipped + ' · Грешки: ' + failed + ' · Спестено: ' + fmtMB_(saved); }
+
+    try {
+      for (var pi = 0; pi < products.length; pi++) {
+        var p = products[pi];
+        var paths = [];
+        if (p.imageMain && p.imageMain.trim()) paths.push(p.imageMain.trim());
+        var prefix = (p.imagePrefix || '').trim();
+        if (prefix) {
+          var misses = 0;
+          for (var n = 1; n <= 12 && misses < 2; n++) {
+            var gp = prefix + '.' + n + '.jpg';
+            if (await urlExists_(gp)) { paths.push(gp); misses = 0; } else { misses++; }
+          }
+        }
+        for (var i = 0; i < paths.length; i++) {
+          var path = paths[i];
+          done++;
+          show('Продукт ' + (pi + 1) + '/' + products.length + ' (' + (p.name || p.id) + ') — снимка ' + (i + 1) + '/' + paths.length + '\n' + path);
+          try {
+            var res = await fetch(path + '?t=' + Date.now());
+            if (!res.ok) { skipped++; continue; }
+            var blob = await res.blob();
+            var size = blob.size;
+            // Презаписваме само JPEG пътища и само ако са наистина големи.
+            if (/\.jpe?g$/i.test(path) && size > 350 * 1024) {
+              var small = await compressImage_(blob, 1400, 0.82);
+              if (small.size < size * 0.9) {
+                var up = await uploadImageToGithub_(small, path);
+                if (up.ok) { saved += (size - small.size); optimized++; blob = small; }
+                else { failed++; continue; }
+              } else { skipped++; }
+            } else { skipped++; }
+            // Малка версия за миниатюрите, ако липсва
+            var tp = thumbPath_(path);
+            if (!(await urlExists_(tp))) {
+              var tb = await compressImage_(blob, 260, 0.7);
+              var tu = await uploadImageToGithub_(tb, tp);
+              if (tu.ok) thumbsMade++; else failed++;
+            }
+          } catch (e) { failed++; console.error(path, e); }
+        }
+      }
+      show('Готово ✓ Обработени снимки: ' + done);
+      toast('Оптимизацията приключи. Спестено ' + fmtMB_(saved) + '. Промените се виждат на сайта до 1-2 минути.', 'success');
+    } catch (e) {
+      toast('Грешка: ' + (e.message || e), 'error');
+    } finally {
+      optimizing_ = false; btn.disabled = false;
+    }
+  }
+
   // Смаля и компресира снимката в браузъра преди качване (макс. 1400px по
   // по-дългата страна, JPEG ~82%). Типично 1.5MB -> 150-300KB, без видима разлика
   // - най-голямото ускорение на зареждането на сайта. Ако резултатът не е по-малък,
   // се качва оригиналът.
-  function compressImage_(file) {
+  function compressImage_(file, maxSide, quality) {
     return new Promise(function(resolve) {
       var url = URL.createObjectURL(file);
       var img = new Image();
       img.onload = function() {
         try {
-          var max = 1400, w = img.naturalWidth, h = img.naturalHeight;
+          var max = maxSide || 1400, w = img.naturalWidth, h = img.naturalHeight;
           var scale = Math.min(1, max / Math.max(w, h));
           var canvas = document.createElement('canvas');
           canvas.width = Math.round(w * scale); canvas.height = Math.round(h * scale);
@@ -940,7 +1026,7 @@
           canvas.toBlob(function(blob) {
             URL.revokeObjectURL(url);
             resolve(blob && blob.size < file.size ? blob : file);
-          }, 'image/jpeg', 0.82);
+          }, 'image/jpeg', quality || 0.82);
         } catch (e) { URL.revokeObjectURL(url); resolve(file); }
       };
       img.onerror = function() { URL.revokeObjectURL(url); resolve(file); };
@@ -987,6 +1073,15 @@
     // други разширения (напр. съществуваща главна .png) качваме оригинала.
     var toUpload = /\.jpe?g$/i.test(destPath) ? await compressImage_(file) : file;
     var result = await uploadImageToGithub_(toUpload, destPath);
+    // Малка версия (260px, ~15KB) до голямата: "abc.jpg" -> "abc.t.jpg". Сайтът я
+    // ползва за миниатюрите, така че да се появяват почти мигновено. Ако не
+    // успее да се качи, не е проблем - сайтът пада обратно към голямата снимка.
+    if (result.ok) {
+      try {
+        var thumbBlob = await compressImage_(file, 260, 0.7);
+        await uploadImageToGithub_(thumbBlob, destPath.replace(/\.[^./]+$/, '') + '.t.jpg');
+      } catch (e) { /* незадължително */ }
+    }
     if (!result.ok) {
       toast('Грешка при качване: ' + result.message, 'error');
       inputEl.value = '';
