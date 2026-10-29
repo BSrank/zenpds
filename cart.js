@@ -383,6 +383,15 @@ async function loadImagesForProduct(productId) {
 
     if (!config || !mainImageContainer || !thumbnailsContainer) return;
 
+    // Картите се пре-рисуват при смяна на категория (нови DOM елементи), затова
+    // ако снимките на този продукт вече са проверени, ги показваме веднага от
+    // кеша, вместо да правим всички проверки отново.
+    const cachedImages = window[`${productId}_images`];
+    if (cachedImages && cachedImages.length) {
+        displayProductImages(productId, cachedImages);
+        return;
+    }
+
     // ВАЖНО: проверяваме основната снимка + номерираните снимки (1.jpg, 2.jpg, ...)
     // ПАРАЛЕЛНО с Promise.all, вместо последователно (едно по едно с await в цикъл).
     // Последователната проверка беше основната причина за бавното зареждане на
@@ -564,6 +573,7 @@ function setupEventListeners() {
             ACTIVE_CATEGORY = e.target.dataset.category;
             renderCategoryTabs();
             renderProductsGrid();
+            loadProductImages(); // новите карти са без снимки - зареждаме ги отново
         }
     });
 
