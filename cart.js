@@ -198,7 +198,9 @@ function renderProductsGrid() {
                 '<div class="product-image-main" id="mainImage-' + p.id + '">' +
                     (p.imageMain ? '<img src="' + p.imageMain + '" alt="" fetchpriority="high" decoding="async" onclick="openLightbox(\'' + p.id + '\', 0)" onerror="this.remove()">' : '') +
                 '</div>' +
-                '<div class="product-thumbnails" id="thumbnails-' + p.id + '"></div>' +
+                '<div class="product-thumbnails" id="thumbnails-' + p.id + '">' +
+                    (p.imagePrefix ? '<div class="product-thumbnail" style="background:#1a1a1a;opacity:.5;"></div>'.repeat(3) : '') +
+                '</div>' +
             '</div>' +
             '<div class="product-info">' +
                 '<h2 class="product-title">' + p.name + '</h2>' +
@@ -455,23 +457,37 @@ function displayProductImages(productId, images) {
     const thumbnailsContainer = document.getElementById(`thumbnails-${productId}`);
     if (!mainImageContainer || !thumbnailsContainer) return;
 
-    // Display main image
-    mainImageContainer.innerHTML = `
-        <img src="${images[0]}" alt="Product image" onclick="openLightbox('${productId}', 0)">
-    `;
+    // Главната снимка вече може да е показана при рендирането на картата -
+    // не я пре-рисуваме, ако е същата (без мигане).
+    const current = mainImageContainer.querySelector('img');
+    if (!current || current.getAttribute('src') !== images[0]) {
+        mainImageContainer.innerHTML = `
+            <img src="${images[0]}" alt="Product image" onclick="openLightbox('${productId}', 0)">
+        `;
+    } else {
+        current.setAttribute('onclick', `openLightbox('${productId}', 0)`);
+    }
 
-    // Display thumbnails if more than one image
+    // Миниатюрите: плавно появяване, нисък приоритет (да не бавят главната),
+    // а ако няма повече от една снимка - махаме заготовките.
     if (images.length > 1) {
         thumbnailsContainer.innerHTML = images.map((img, index) => `
             <div class="product-thumbnail ${index === 0 ? 'active' : ''}"
                  onclick="changeMainImage('${productId}', ${index})">
-                <img src="${img}" alt="Thumbnail ${index + 1}" loading="lazy" decoding="async">
+                <img src="${img}" alt="Thumbnail ${index + 1}" loading="lazy" decoding="async" fetchpriority="low"
+                     style="opacity:0;transition:opacity .35s;" onload="this.style.opacity=1">
             </div>
         `).join('');
+    } else {
+        thumbnailsContainer.innerHTML = '';
     }
 
     // Store images for lightbox
     window[`${productId}_images`] = images;
+
+    // Предварително зареждане на останалите големи снимки на заден план, за да
+    // са мигновени при кликване върху миниатюра (след като главната е готова).
+    setTimeout(() => images.slice(1).forEach(src => { const i = new Image(); i.decoding = 'async'; i.src = src; }), 300);
 }
 
 function changeMainImage(productId, index) {
