@@ -468,26 +468,55 @@ function displayProductImages(productId, images) {
         current.setAttribute('onclick', `openLightbox('${productId}', 0)`);
     }
 
-    // Миниатюрите: плавно появяване, нисък приоритет (да не бавят главната),
-    // а ако няма повече от една снимка - махаме заготовките.
+    // Миниатюрите се зареждат СТРОГО по ред (1, 2, 3...) през обща опашка с
+    // най-много 2 едновременни теглeния - така не се бият за връзката помежду
+    // си (на мобилна мрежа това даваше хаотично/обратно зареждане) и главната
+    // снимка не се бави. Докато чакат, стоят тъмни заготовки на мястото си.
     if (images.length > 1) {
         thumbnailsContainer.innerHTML = images.map((img, index) => `
-            <div class="product-thumbnail ${index === 0 ? 'active' : ''}"
-                 onclick="changeMainImage('${productId}', ${index})">
-                <img src="${img}" alt="Thumbnail ${index + 1}" loading="lazy" decoding="async" fetchpriority="low"
-                     style="opacity:0;transition:opacity .35s;" onload="this.style.opacity=1">
-            </div>
+            <div class="product-thumbnail ${index === 0 ? 'active' : ''}" id="thumb-${productId}-${index}"
+                 style="background:#1a1a1a;" onclick="changeMainImage('${productId}', ${index})"></div>
         `).join('');
+        images.forEach((src, index) => {
+            enqueueImage(src, (ok, loadedImg) => {
+                const slot = document.getElementById(`thumb-${productId}-${index}`);
+                if (!slot || !ok) return;
+                loadedImg.alt = 'Thumbnail ' + (index + 1);
+                loadedImg.style.cssText = 'opacity:0;transition:opacity .35s;';
+                slot.style.background = '';
+                slot.appendChild(loadedImg);
+                requestAnimationFrame(() => { loadedImg.style.opacity = 1; });
+            });
+        });
     } else {
         thumbnailsContainer.innerHTML = '';
     }
 
     // Store images for lightbox
     window[`${productId}_images`] = images;
+}
 
-    // Предварително зареждане на останалите големи снимки на заден план, за да
-    // са мигновени при кликване върху миниатюра (след като главната е готова).
-    setTimeout(() => images.slice(1).forEach(src => { const i = new Image(); i.decoding = 'async'; i.src = src; }), 300);
+// ---- Обща опашка за зареждане на снимки (по ред, макс. 2 наведнъж) ----
+const IMAGE_QUEUE = [];
+let imageLoadsActive = 0;
+const MAX_PARALLEL_IMAGE_LOADS = 2;
+
+function enqueueImage(src, onDone) {
+    IMAGE_QUEUE.push({ src, onDone });
+    pumpImageQueue();
+}
+
+function pumpImageQueue() {
+    while (imageLoadsActive < MAX_PARALLEL_IMAGE_LOADS && IMAGE_QUEUE.length) {
+        const task = IMAGE_QUEUE.shift();
+        imageLoadsActive++;
+        const img = new Image();
+        img.decoding = 'async';
+        const finish = (ok) => { imageLoadsActive--; try { task.onDone(ok, img); } catch (e) {} pumpImageQueue(); };
+        img.onload = () => finish(true);
+        img.onerror = () => finish(false);
+        img.src = task.src;
+    }
 }
 
 function changeMainImage(productId, index) {
