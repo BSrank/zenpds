@@ -234,6 +234,13 @@
       </div>
 
       <div class="card">
+        <h3 style="font-family:'DM Serif Display',serif;font-weight:400;font-size:1.1rem;margin-bottom:1rem;">Категории на продуктите</h3>
+        <p style="font-size:0.75rem;color:var(--muted);margin-bottom:0.8rem;">Показват се като табове в "Продукти" на сайта. Първата в списъка е избрана по подразбиране при отваряне. Таб "Всички" се добавя автоматично накрая.</p>
+        <div id="categoriesList"></div>
+        <button type="button" class="small-btn" onclick="addCategory()">+ Добави категория</button>
+      </div>
+
+      <div class="card">
         <h3 style="font-family:'DM Serif Display',serif;font-weight:400;font-size:1.1rem;margin-bottom:1rem;">Домейн на сайта</h3>
         <label class="product-row-label" style="display:block;margin-bottom:6px;">Публичен адрес (домейн)</label>
         <input type="text" id="settings-sitedomain" placeholder="https://zenairpods.store/" />
@@ -689,8 +696,10 @@
         '<div class="product-edit-grid">' +
           '<div><label class="field-label">Категория (таб в "Продукти" на сайта)</label>' +
             '<select onchange="products[' + idx + '].category = this.value;">' +
-              '<option value="headphones"' + ((p.category||'headphones') === 'headphones' ? ' selected' : '') + '>Слушалки</option>' +
-              '<option value="chargers"' + (p.category === 'chargers' ? ' selected' : '') + '>Зарядни</option>' +
+              getCategories_().map(function(cat, ci) {
+                var cur = p.category || getCategories_()[0].id;
+                return '<option value="' + cat.id + '"' + (cur === cat.id ? ' selected' : '') + '>' + esc_(cat.label) + '</option>';
+              }).join('') +
             '</select>' +
           '</div>' +
         '</div>' +
@@ -771,7 +780,7 @@
       active: true,
       isNewListing: true,
       variantGroup: null,
-      category: 'headphones'
+      category: getCategories_()[0].id
     });
     renderProductsList();
     // скролваме до новодобавения продукт (последната карта), за удобство
@@ -964,6 +973,64 @@
     toast('Снимката е качена в GitHub! Не забравяй да натиснеш "💾 Запази промените" горе, за да влезе пътят в сила на сайта.', 'success');
   }
 
+  // ─── КАТЕГОРИИ (siteSettings.categories = [{id,label}]) ───
+  var DEFAULT_CATEGORIES_ = [{ id: 'headphones', label: 'Слушалки' }, { id: 'chargers', label: 'Зарядни' }];
+  function getCategories_() {
+    var cats = siteSettings.categories;
+    return (Array.isArray(cats) && cats.length) ? cats : DEFAULT_CATEGORIES_.map(function(c) { return { id: c.id, label: c.label }; });
+  }
+  function renderCategoriesList() {
+    var el = document.getElementById('categoriesList');
+    if (!el) return;
+    var cats = getCategories_();
+    el.innerHTML = cats.map(function(c, i) {
+      var used = products.filter(function(p) { return (p.category || cats[0].id) === c.id; }).length;
+      return '<div class="variant-option-row" style="grid-template-columns:1fr auto auto auto auto;">' +
+        '<div><input type="text" value="' + esc_(c.label) + '" onchange="renameCategory(' + i + ', this.value)" /></div>' +
+        '<span style="font-size:0.7rem;color:var(--muted);padding-bottom:10px;">' + used + ' продукта</span>' +
+        '<button type="button" class="move-btn" onclick="moveCategory(' + i + ',-1)" ' + (i === 0 ? 'disabled' : '') + '>↑</button>' +
+        '<button type="button" class="move-btn" onclick="moveCategory(' + i + ',1)" ' + (i === cats.length - 1 ? 'disabled' : '') + '>↓</button>' +
+        '<button type="button" class="small-btn danger" onclick="deleteCategory(' + i + ')" ' + (cats.length <= 1 ? 'disabled' : '') + '>🗑</button>' +
+      '</div>';
+    }).join('');
+  }
+  function addCategory() {
+    var label = prompt('Име на новата категория:');
+    if (!label || !label.trim()) return;
+    siteSettings.categories = getCategories_();
+    siteSettings.categories.push({ id: 'cat' + Date.now().toString(36), label: label.trim() });
+    renderCategoriesList(); renderProductsList();
+    toast('Добавена. Натисни "💾 Запази настройките".', 'success');
+  }
+  function renameCategory(i, label) {
+    label = (label || '').trim();
+    if (!label) { renderCategoriesList(); return; }
+    siteSettings.categories = getCategories_();
+    siteSettings.categories[i].label = label;
+    renderProductsList();
+  }
+  function moveCategory(i, dir) {
+    var cats = siteSettings.categories = getCategories_();
+    var j = i + dir;
+    if (j < 0 || j >= cats.length) return;
+    var t = cats[i]; cats[i] = cats[j]; cats[j] = t;
+    renderCategoriesList(); renderProductsList();
+  }
+  function deleteCategory(i) {
+    var cats = siteSettings.categories = getCategories_();
+    if (cats.length <= 1) return;
+    var gone = cats[i];
+    var fallback = cats[i === 0 ? 1 : 0];
+    var affected = products.filter(function(p) { return (p.category || cats[0].id) === gone.id; });
+    var msg = 'Изтрий категория "' + gone.label + '"?';
+    if (affected.length) msg += '\n' + affected.length + ' продукта ще бъдат преместени в "' + fallback.label + '".';
+    if (!confirm(msg)) return;
+    affected.forEach(function(p) { p.category = fallback.id; });
+    cats.splice(i, 1);
+    renderCategoriesList(); renderProductsList();
+    toast('Изтрита. Натисни "💾 Запази настройките".', 'success');
+  }
+
   // ─── SETTINGS TAB ───
   function renderSettingsUI() {
     document.getElementById('settings-sitedomain').value = siteSettings.siteDomain || '';
@@ -973,6 +1040,7 @@
     document.getElementById('toggle-manualreviews').classList.toggle('on', siteSettings.showManualReviews === true);
     document.getElementById('toggle-clientreviews').classList.toggle('on', siteSettings.showClientReviews === true);
     document.getElementById('toggle-newlistings').classList.toggle('on', siteSettings.showNewListings === true);
+    renderCategoriesList();
     renderManualReviewsList();
     var chanceEl = document.getElementById('settings-reward-chance');
     var percentEl = document.getElementById('settings-reward-percent');
