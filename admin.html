@@ -88,9 +88,12 @@
     .product-edit-header .product-name-cell { flex: 1; min-width: 160px; font-size: 1rem; }
     .product-edit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.7rem; margin-bottom: 0.7rem; }
     .product-edit-grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
+    .variant-option-row { display: grid; grid-template-columns: 1fr 0.7fr auto; gap: 0.6rem; margin-bottom: 0.6rem; align-items: end; }
+    .variant-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; margin-bottom: 0.7rem; }
     .product-edit-card label.field-label { display: block; font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
     @media (max-width: 700px) {
       .product-edit-grid, .product-edit-grid.cols-4 { grid-template-columns: 1fr 1fr; }
+      .variant-option-row { grid-template-columns: 1fr; }
     }
     .toast { position: fixed; bottom: 30px; right: 30px; background: var(--surface); border: 1px solid var(--border); padding: 12px 20px; border-radius: 8px; font-size: 0.85rem; z-index: 999; transform: translateY(20px); opacity: 0; transition: all 0.3s; pointer-events: none; }
     .reason-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
@@ -617,6 +620,35 @@
         '</div>';
       }).join('') + '</div>';
 
+      // ─── Варианти (напр. "Дължина": 1м/2м с различна цена) - изключени по
+      // подразбиране за всеки продукт (p.variantGroup е undefined/null), и се
+      // включват индивидуално за конкретна обява от тук. Когато е изключено,
+      // сайтът показва продукта точно както преди (без избор, една цена).
+      var hasVariants = !!(p.variantGroup && p.variantGroup.options);
+      var variantSectionHTML =
+        '<div class="toggle-row">' +
+          '<div class="toggle-switch ' + (hasVariants ? 'on' : '') + '" onclick="toggleVariants(' + idx + ')"></div>' +
+          '<span class="toggle-row-label">Варианти с избор (напр. дължина на кабел, цвят...)</span>' +
+        '</div>';
+      if (hasVariants) {
+        var vg = p.variantGroup;
+        var optionsHTML = (vg.options || []).map(function(opt, oi) {
+          return '<div class="variant-option-row">' +
+            '<div><label class="field-label">Етикет (напр. "2м")</label><input type="text" value="' + esc_(opt.label) + '" onchange="products[' + idx + '].variantGroup.options[' + oi + '].label = this.value;" /></div>' +
+            '<div><label class="field-label">Цена (€)</label><input type="number" step="0.01" value="' + (opt.price || 0) + '" onchange="products[' + idx + '].variantGroup.options[' + oi + '].price = parseFloat(this.value)||0; renderProductsList();" /></div>' +
+            '<button type="button" class="small-btn danger" onclick="removeVariantOption(' + idx + ',' + oi + ')" title="Премахни варианта" ' + ((vg.options.length <= 1) ? 'disabled' : '') + '>🗑</button>' +
+          '</div>';
+        }).join('');
+        variantSectionHTML +=
+          '<div class="variant-box">' +
+            '<div style="margin-bottom:0.7rem;"><label class="field-label">Име на избора (показва се на клиента, напр. "Дължина" или "Цвят")</label>' +
+              '<input type="text" value="' + esc_(vg.label) + '" onchange="products[' + idx + '].variantGroup.label = this.value;" placeholder="напр. Дължина" /></div>' +
+            optionsHTML +
+            '<button type="button" class="small-btn" onclick="addVariantOption(' + idx + ')">+ Добави вариант</button>' +
+            '<p style="font-size:0.68rem;color:var(--muted);margin-top:0.6rem;">💡 Цената на продукта по-горе спира да се ползва - клиентът вижда и плаща точно цената на избрания вариант.</p>' +
+          '</div>';
+      }
+
       return '<div class="product-edit-card' + (isNew ? ' new-listing' : '') + '">' +
         '<div class="product-edit-header">' +
           '<span class="position-badge">#' + (idx + 1) + '</span>' +
@@ -639,6 +671,15 @@
           '<div><label class="field-label">ID (уникално, без интервали)</label><input type="text" value="' + esc_(p.id) + '" onchange="products[' + idx + '].id = this.value.trim();" /></div>' +
         '</div>' +
 
+        '<div class="product-edit-grid">' +
+          '<div><label class="field-label">Категория (таб в "Продукти" на сайта)</label>' +
+            '<select onchange="products[' + idx + '].category = this.value;">' +
+              '<option value="headphones"' + ((p.category||'headphones') === 'headphones' ? ' selected' : '') + '>Слушалки</option>' +
+              '<option value="chargers"' + (p.category === 'chargers' ? ' selected' : '') + '>Зарядни</option>' +
+            '</select>' +
+          '</div>' +
+        '</div>' +
+
         '<div class="product-edit-grid cols-4">' +
           '<div><label class="field-label">Цена (€)</label><input type="number" step="0.01" value="' + (p.price||0) + '" onchange="products[' + idx + '].price = parseFloat(this.value)||0;" /></div>' +
           '<div><label class="field-label">Цена (лв)</label><input type="number" step="1" value="' + (p.priceBgn||0) + '" onchange="products[' + idx + '].priceBgn = parseFloat(this.value)||0;" /></div>' +
@@ -653,6 +694,8 @@
 
         imgRow +
 
+        variantSectionHTML +
+
         '<div style="margin-bottom:0.7rem;">' +
           '<label class="field-label">Кратки точки за преглед (по една на ред — показват се в картата на продукта)</label>' +
           '<textarea rows="3" onchange="products[' + idx + '].previewFeatures = this.value.split(\'\\n\').map(function(s){return s.trim();}).filter(Boolean);">' + esc_((p.previewFeatures||[]).join('\n')) + '</textarea>' +
@@ -664,6 +707,29 @@
         '</div>' +
       '</div>';
     }).join('');
+  }
+
+  function toggleVariants(idx) {
+    var p = products[idx];
+    if (p.variantGroup && p.variantGroup.options) {
+      if (!confirm('Изключи вариантите за "' + (p.name || 'този продукт') + '"? Настройките им ще се изтрият.')) return;
+      p.variantGroup = null;
+    } else {
+      p.variantGroup = { label: '', options: [{ label: '', price: p.price || 0 }] };
+    }
+    renderProductsList();
+  }
+
+  function addVariantOption(idx) {
+    products[idx].variantGroup.options.push({ label: '', price: products[idx].price || 0 });
+    renderProductsList();
+  }
+
+  function removeVariantOption(idx, oi) {
+    var opts = products[idx].variantGroup.options;
+    if (opts.length <= 1) return;
+    opts.splice(oi, 1);
+    renderProductsList();
   }
 
   function toggleProductField(idx, field, el) {
@@ -688,7 +754,9 @@
       previewFeatures: [],
       sections: [],
       active: true,
-      isNewListing: true
+      isNewListing: true,
+      variantGroup: null,
+      category: 'headphones'
     });
     renderProductsList();
     // скролваме до новодобавения продукт (последната карта), за удобство
