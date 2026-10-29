@@ -920,8 +920,8 @@
     toast('Снимката е премахната! Не забравяй да натиснеш "💾 Запази промените" горе.', 'success');
   }
 
-  // Смаля и компресира снимката в браузъра преди качване (макс. 1600px по
-  // по-дългата страна, JPEG ~85%). Типично 1.5MB -> 150-300KB, без видима разлика
+  // Смаля и компресира снимката в браузъра преди качване (макс. 1400px по
+  // по-дългата страна, JPEG ~82%). Типично 1.5MB -> 150-300KB, без видима разлика
   // - най-голямото ускорение на зареждането на сайта. Ако резултатът не е по-малък,
   // се качва оригиналът.
   function compressImage_(file) {
@@ -930,7 +930,7 @@
       var img = new Image();
       img.onload = function() {
         try {
-          var max = 1600, w = img.naturalWidth, h = img.naturalHeight;
+          var max = 1400, w = img.naturalWidth, h = img.naturalHeight;
           var scale = Math.min(1, max / Math.max(w, h));
           var canvas = document.createElement('canvas');
           canvas.width = Math.round(w * scale); canvas.height = Math.round(h * scale);
@@ -940,7 +940,7 @@
           canvas.toBlob(function(blob) {
             URL.revokeObjectURL(url);
             resolve(blob && blob.size < file.size ? blob : file);
-          }, 'image/jpeg', 0.85);
+          }, 'image/jpeg', 0.82);
         } catch (e) { URL.revokeObjectURL(url); resolve(file); }
       };
       img.onerror = function() { URL.revokeObjectURL(url); resolve(file); };
