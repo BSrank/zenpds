@@ -607,7 +607,22 @@
       var slots = ['main', 1, 2, 3, 4, 5];
       var imgRow = '<div class="img-upload-row">' + slots.map(function(slot) {
         var cachedUrl = productImgPreviews[previewKey + '_' + slot];
-        var previewInner = cachedUrl ? '<img src="' + cachedUrl + '">' : (slot === 'main' ? '★' : String(slot));
+        var fallbackChar = (slot === 'main' ? '★' : String(slot));
+        // Ако няма локален преглед (след презареждане на страницата), опитваме да
+        // заредим реалната снимка от сайта по същия път, по който я ползва cart.js:
+        // главна = imageMain, галерия = {imagePrefix}.{N}.jpg. Ако файлът не
+        // съществува, onerror връща обичайния символ вместо счупена иконка.
+        var livePath = (slot === 'main')
+          ? (p.imageMain || '').trim()
+          : ((p.imagePrefix || '').trim() ? (p.imagePrefix.trim() + '.' + slot + '.jpg') : '');
+        var previewInner;
+        if (cachedUrl) {
+          previewInner = '<img src="' + cachedUrl + '">';
+        } else if (livePath) {
+          previewInner = '<img src="' + encodeURI(livePath.replace(/^\//, '')) + '" onerror="this.parentNode.textContent=\'' + fallbackChar + '\'">';
+        } else {
+          previewInner = fallbackChar;
+        }
         var label = slot === 'main' ? 'Главна' : ('№' + slot);
         return '<div class="img-upload-slot">' +
           '<div class="img-slot-label">' + label + '</div>' +
