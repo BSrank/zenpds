@@ -119,7 +119,8 @@
         }
       ],
       "active": false,
-      "isNewListing": false
+      "isNewListing": false,
+      "category": "chargers"
     },
     {
       "id": "adapter14",
@@ -154,7 +155,8 @@
         }
       ],
       "active": false,
-      "isNewListing": false
+      "isNewListing": false,
+      "category": "chargers"
     },
     {
       "id": "cable17",
@@ -189,7 +191,8 @@
         }
       ],
       "active": true,
-      "isNewListing": false
+      "isNewListing": false,
+      "category": "chargers"
     },
     {
       "id": "adapter17-40w",
@@ -225,7 +228,8 @@
         }
       ],
       "active": true,
-      "isNewListing": false
+      "isNewListing": false,
+      "category": "chargers"
     },
     {
       "id": "Cable17-1m",
@@ -260,7 +264,8 @@
         }
       ],
       "active": true,
-      "isNewListing": false
+      "isNewListing": false,
+      "category": "chargers"
     },
     {
       "id": "adapter17-35w",
@@ -296,7 +301,8 @@
         }
       ],
       "active": true,
-      "isNewListing": false
+      "isNewListing": false,
+      "category": "chargers"
     }
   ],
   "settings": {
