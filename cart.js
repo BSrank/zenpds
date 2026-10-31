@@ -660,6 +660,7 @@ function setupEventListeners() {
     // Courier selector
     const courierSelect = document.getElementById('courier');
     if (courierSelect) courierSelect.addEventListener('change', updateOfficeLabel);
+    updateOfficeLabel();
 
     // Add to cart buttons (динамично създадени - делегираме на document, за да
     // работят и когато карите се пре-рендират след зареждане на products.json)
@@ -990,20 +991,14 @@ function closeCheckoutModal() {
 }
 
 function updateOfficeLabel() {
-    const courierSelect = document.getElementById('courier');
     const officeLabel = document.getElementById('officeLabel');
     const officeInput = document.getElementById('office');
-
-    if (courierSelect && officeLabel && officeInput) {
-        const courier = courierSelect.value;
-        if (courier === 'Econt') {
-            officeLabel.textContent = 'Econt офис *';
-            officeInput.placeholder = 'Напр: Econt офис София, ул. Витоша 5';
-        } else {
-            officeLabel.textContent = 'Офис на куриера *';
-            officeInput.placeholder = 'Посочете точния еконт офис на куриера за доставка';
-        }
-    }
+    if (!officeLabel || !officeInput) return;
+    // Само Econt е наличен засега - текстът е ясен още от отварянето на формата
+    // (преди се сменяше само при промяна на куриера и клиентите виждаха
+    // "Изберете куриер", което водеше до отговори от типа "Econt").
+    officeLabel.textContent = 'Econt офис *';
+    officeInput.placeholder = 'Напр: Econt Младост 3, Ал. Малинов';
 }
 
 // ==================== HANDLE CHECKOUT SUBMISSION ====================
