@@ -68,6 +68,42 @@
     .reason-actions button { flex: 1; padding: 11px; border-radius: 10px; font-size: 0.8rem; font-family: 'Inter', sans-serif; cursor: pointer; }
     .reason-actions .btn-primary { background: var(--accent); border: none; color: #fff; }
     .reason-actions .btn-ghost { background: none; border: 1px solid var(--border); color: var(--muted); }
+
+    .tabs { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .tab { flex: 1 0 auto; white-space: nowrap; padding: 12px 14px; }
+    body.has-savebar { padding-bottom: 5.5rem; }
+    .savebar { position: fixed; left: 0; right: 0; bottom: 0; padding: 10px 14px calc(10px + env(safe-area-inset-bottom)); background: var(--surface); border-top: 1px solid var(--border); display: none; z-index: 20; gap: 10px; }
+    .savebar.show { display: flex; }
+    .savebar button { flex: 1; padding: 12px; border-radius: 10px; border: none; background: var(--accent); color: #fff; font-family: 'Inter', sans-serif; font-size: 0.85rem; font-weight: 500; cursor: pointer; }
+    .savebar button:disabled { opacity: 0.6; }
+    .field-label { display: block; font-size: 0.66rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); margin: 10px 0 4px; }
+    .fld, .card input[type="text"], .card input[type="number"], .card select, .card textarea { width: 100%; padding: 10px 11px; background: var(--surface2); border: 1px solid var(--border); color: var(--text); border-radius: 8px; font-family: 'Inter', sans-serif; font-size: 0.85rem; outline: none; }
+    .card textarea { resize: vertical; }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .toggle-line { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
+    .toggle-switch { position: relative; width: 38px; height: 21px; background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; flex-shrink: 0; cursor: pointer; display: inline-block; transition: background .25s, border-color .25s; }
+    .toggle-switch::after { content: ''; position: absolute; top: 2px; left: 2px; width: 15px; height: 15px; background: var(--muted); border-radius: 50%; transition: transform .25s, background .25s; }
+    .toggle-switch.on { background: rgba(82,192,122,0.15); border-color: var(--success); }
+    .toggle-switch.on::after { transform: translateX(17px); background: var(--success); }
+    .toggle-label { font-size: 0.82rem; }
+    .toggle-sub { font-size: 0.7rem; color: var(--muted); }
+    .section-title { font-family: 'DM Serif Display', serif; font-size: 1.05rem; margin-bottom: 8px; }
+    .hint { font-size: 0.7rem; color: var(--muted); line-height: 1.5; margin-top: 6px; }
+    .edit-box { margin-top: 12px; padding-top: 6px; border-top: 1px solid var(--border); }
+    .img-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 6px; }
+    .img-slot { text-align: center; width: 62px; }
+    .img-slot .lbl { font-size: 0.55rem; color: var(--muted); text-transform: uppercase; margin-bottom: 3px; }
+    .img-slot .pv { width: 58px; height: 58px; border-radius: 8px; background: var(--surface2); border: 1px solid var(--border); overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; color: var(--muted); margin: 0 auto 4px; }
+    .img-slot .pv img { width: 100%; height: 100%; object-fit: cover; }
+    .img-slot input[type="file"] { display: none; }
+    .img-slot .b { display: flex; gap: 3px; }
+    .img-slot .b button { flex: 1; padding: 5px 0; border-radius: 6px; font-size: 0.7rem; background: none; border: 1px solid var(--border); color: var(--muted); cursor: pointer; }
+    .img-slot .b button.x { border-color: var(--danger); color: var(--danger); }
+    .variant-row { display: grid; grid-template-columns: 1fr 90px 40px; gap: 6px; align-items: end; margin-bottom: 6px; }
+    .variant-box { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 10px; margin-top: 6px; }
+    .variant-box input[type="text"], .variant-box input[type="number"] { background: var(--surface); }
+    .range { width: 100%; accent-color: var(--accent); }
+    .opt-status { font-size: 0.75rem; color: var(--muted); white-space: pre-line; margin-top: 8px; }
   </style>
 </head>
 <body>
@@ -88,6 +124,8 @@
     <button class="tab active" data-tab="orders" onclick="switchTab('orders')">📋 Поръчки</button>
     <button class="tab" data-tab="reviews" onclick="switchTab('reviews')">⭐ Ревюта</button>
     <button class="tab" data-tab="messages" onclick="switchTab('messages')">✉ Съобщения</button>
+    <button class="tab" data-tab="products" onclick="switchTab('products')">📦 Продукти</button>
+    <button class="tab" data-tab="settings" onclick="switchTab('settings')">⚙ Настройки</button>
   </div>
 
   <div class="tab-panel active" id="tab-orders">
@@ -113,7 +151,31 @@
     </div>
     <div id="messagesList"><p class="loading-note">Зареждане...</p></div>
   </div>
+
+  <div class="tab-panel" id="tab-products">
+    <div class="toolbar">
+      <div class="toolbar-title">Продукти</div>
+      <button class="btn-ghost" onclick="loadSite(true)">↻ Презареди</button>
+    </div>
+    <div class="card">
+      <button class="small-btn" id="optimizeBtn" onclick="optimizeAllImages()" style="width:100%;">🖼 Оптимизирай всички качени снимки</button>
+      <div class="hint">Смалява вече качените снимки и прави малки миниатюри за бързо зареждане. Може да отнеме няколко минути - не затваряй приложението.</div>
+      <div class="opt-status" id="optimizeStatus" style="display:none;"></div>
+    </div>
+    <div id="productsList"><p class="loading-note">Зареждане...</p></div>
+    <div class="btn-row" style="margin-top:6px;"><button class="small-btn accent" onclick="addProduct()">+ Добави продукт</button></div>
+  </div>
+
+  <div class="tab-panel" id="tab-settings">
+    <div class="toolbar">
+      <div class="toolbar-title">Настройки</div>
+      <button class="btn-ghost" onclick="loadSite(true)">↻ Презареди</button>
+    </div>
+    <div id="settingsBody"><p class="loading-note">Зареждане...</p></div>
+  </div>
 </div>
+
+<div class="savebar" id="savebar"><button id="saveBtn" onclick="saveSite()">💾 Запази промените</button></div>
 
 <div class="toast" id="toast"></div>
 
@@ -161,6 +223,10 @@
       messagesLoadedOnce = true;
       loadMessages();
     }
+    if ((name === 'products' || name === 'settings') && !siteLoadedOnce) loadSite();
+    var showBar = (name === 'products' || name === 'settings');
+    document.getElementById('savebar').classList.toggle('show', showBar);
+    document.body.classList.toggle('has-savebar', showBar);
   }
 
   var toastTimer = null;
@@ -396,6 +462,474 @@
       loadMessages();
     } else {
       toast(r.message || 'Грешка при изпращане', 'error');
+    }
+  }
+
+
+  // ═══════════ ПРОДУКТИ / КАТЕГОРИИ / НАСТРОЙКИ ═══════════
+  // Всичко се чете/записва през Code.gs (действия tg*), който държи GitHub
+  // токена в Script Properties - в приложението не се въвежда нищо.
+  var siteData = null, siteLoadedOnce = false, openProductIdx = -1, productImgPreviews = {};
+  var DEFAULT_CATEGORIES_ = [{ id: 'headphones', label: 'Слушалки' }, { id: 'chargers', label: 'Зарядни' }];
+
+  function esc_(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+  function sectionsToText_(sections) {
+    return (sections || []).map(function(s) { return '## ' + (s.title || '') + '\n' + (s.items || []).join('\n'); }).join('\n\n');
+  }
+  function parseSectionsText_(text) {
+    var sections = [], current = null;
+    String(text || '').split('\n').forEach(function(line) {
+      var t = line.trim();
+      if (!t) return;
+      if (t.indexOf('## ') === 0) { current = { title: t.slice(3).trim(), items: [] }; sections.push(current); }
+      else if (current) current.items.push(t);
+    });
+    return sections;
+  }
+
+  async function loadSite(force) {
+    if (siteLoadedOnce && !force) return;
+    if (force && siteLoadedOnce && !confirm('Презареждане - всички незапазени промени ще се загубят. Продължи?')) return;
+    document.getElementById('productsList').innerHTML = '<p class="loading-note">Зареждане...</p>';
+    document.getElementById('settingsBody').innerHTML = '<p class="loading-note">Зареждане...</p>';
+    try {
+      var r = await postAction({ action: 'tgGetSite' });
+      if (!r || !r.success) throw new Error((r && r.message) || 'Грешка');
+      siteData = r.content || {};
+      siteData.products = siteData.products || [];
+      siteData.settings = siteData.settings || {};
+      siteLoadedOnce = true;
+      renderProducts();
+      renderSettings();
+    } catch (e) {
+      var msg = '<p class="loading-note">Грешка при зареждане: ' + esc_(e.message) + '</p>';
+      document.getElementById('productsList').innerHTML = msg;
+      document.getElementById('settingsBody').innerHTML = msg;
+    }
+  }
+
+  // ── Категории ──
+  function getCategories_() {
+    var cats = siteData.settings.categories;
+    return (Array.isArray(cats) && cats.length) ? cats : DEFAULT_CATEGORIES_.map(function(c) { return { id: c.id, label: c.label }; });
+  }
+  function categoryLabel_(id) {
+    var cats = getCategories_();
+    for (var i = 0; i < cats.length; i++) if (cats[i].id === (id || cats[0].id)) return cats[i].label;
+    return cats[0].label;
+  }
+  function addCategory() {
+    var label = prompt('Име на новата категория:');
+    if (!label || !label.trim()) return;
+    siteData.settings.categories = getCategories_();
+    siteData.settings.categories.push({ id: 'cat' + Date.now().toString(36), label: label.trim() });
+    renderSettings(); renderProducts();
+  }
+  function renameCategory(i, label) {
+    label = (label || '').trim();
+    if (!label) { renderSettings(); return; }
+    siteData.settings.categories = getCategories_();
+    siteData.settings.categories[i].label = label;
+    renderProducts();
+  }
+  function moveCategory(i, dir) {
+    var cats = siteData.settings.categories = getCategories_();
+    var j = i + dir;
+    if (j < 0 || j >= cats.length) return;
+    var t = cats[i]; cats[i] = cats[j]; cats[j] = t;
+    renderSettings(); renderProducts();
+  }
+  function deleteCategory(i) {
+    var cats = siteData.settings.categories = getCategories_();
+    if (cats.length <= 1) return;
+    var gone = cats[i], fallback = cats[i === 0 ? 1 : 0];
+    var affected = siteData.products.filter(function(p) { return (p.category || cats[0].id) === gone.id; });
+    var msg = 'Изтрий категория "' + gone.label + '"?';
+    if (affected.length) msg += '\n' + affected.length + ' продукта ще бъдат преместени в "' + fallback.label + '".';
+    if (!confirm(msg)) return;
+    affected.forEach(function(p) { p.category = fallback.id; });
+    cats.splice(i, 1);
+    renderSettings(); renderProducts();
+  }
+
+  // ── Продукти ──
+  function productPriceText_(p) {
+    if (p.variantGroup && p.variantGroup.options && p.variantGroup.options.length) {
+      return 'от €' + Math.min.apply(null, p.variantGroup.options.map(function(o) { return Number(o.price) || 0; })).toFixed(2);
+    }
+    return '€' + (Number(p.price) || 0).toFixed(2);
+  }
+
+  function renderProducts() {
+    var list = document.getElementById('productsList');
+    var prods = siteData.products;
+    if (!prods.length) { list.innerHTML = '<p class="empty-note">Няма продукти.</p>'; return; }
+    list.innerHTML = prods.map(function(p, idx) {
+      var active = p.active !== false;
+      var open = (openProductIdx === idx);
+      return '<div class="card">' +
+        '<div class="order-top"><span class="order-name">#' + (idx + 1) + ' ' + esc_(p.name || '(без име)') + '</span><span class="order-total">' + productPriceText_(p) + '</span></div>' +
+        '<div class="order-meta">' + esc_(categoryLabel_(p.category)) + ' · <span class="status-pill ' + (active ? 'status-other' : 'status-noresponse') + '">' + (active ? 'активен' : 'скрит') + '</span>' + (p.isNewListing ? ' · <span class="status-pill status-new">нова обява</span>' : '') + '</div>' +
+        '<div class="btn-row">' +
+          '<button class="small-btn" style="flex:0 0 46px;min-width:0;" onclick="moveProduct(' + idx + ',-1)"' + (idx === 0 ? ' disabled' : '') + '>↑</button>' +
+          '<button class="small-btn" style="flex:0 0 46px;min-width:0;" onclick="moveProduct(' + idx + ',1)"' + (idx === prods.length - 1 ? ' disabled' : '') + '>↓</button>' +
+          '<button class="small-btn accent" onclick="toggleOpenProduct(' + idx + ')">' + (open ? '✕ Затвори' : '✏ Редактирай') + '</button>' +
+        '</div>' +
+        (open ? productEditHTML_(p, idx) : '') +
+      '</div>';
+    }).join('');
+  }
+
+  function toggleOpenProduct(idx) { openProductIdx = (openProductIdx === idx) ? -1 : idx; renderProducts(); }
+  function moveProduct(idx, dir) {
+    var j = idx + dir, a = siteData.products;
+    if (j < 0 || j >= a.length) return;
+    var t = a[idx]; a[idx] = a[j]; a[j] = t;
+    if (openProductIdx === idx) openProductIdx = j; else if (openProductIdx === j) openProductIdx = idx;
+    renderProducts();
+  }
+  function toggleProductField(idx, field) {
+    var p = siteData.products[idx];
+    if (field === 'active') p.active = (p.active === false);   // active!==false е по подразбиране
+    else p[field] = !p[field];
+    renderProducts();
+  }
+  function addProduct() {
+    siteData.products.push({ id: '', name: 'Нов продукт', price: 0, priceBgn: 0, comparePrice: 0, comparePriceBgn: 0, imageMain: '', imagePrefix: '', previewFeatures: [], sections: [], active: true, isNewListing: true, variantGroup: null, category: getCategories_()[0].id });
+    openProductIdx = siteData.products.length - 1;
+    renderProducts();
+    var cards = document.querySelectorAll('#productsList .card');
+    if (cards.length) cards[cards.length - 1].scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+  function deleteProduct(idx) {
+    var p = siteData.products[idx];
+    if (!confirm('Изтрий "' + (p.name || 'този продукт') + '"? Не трие снимките от GitHub, само записа.')) return;
+    siteData.products.splice(idx, 1);
+    openProductIdx = -1;
+    renderProducts();
+  }
+
+  function productEditHTML_(p, idx) {
+    var cats = getCategories_();
+    var curCat = p.category || cats[0].id;
+    var hasVariants = !!(p.variantGroup && p.variantGroup.options);
+    var P = 'siteData.products[' + idx + ']';
+
+    var slots = ['main', 1, 2, 3, 4, 5];
+    var imgRow = '<div class="img-row">' + slots.map(function(slot) {
+      var key = (p.id || ('idx' + idx)) + '_' + slot;
+      var cached = productImgPreviews[key];
+      var fb = (slot === 'main' ? '★' : String(slot));
+      var live = (slot === 'main') ? (p.imageMain || '').trim() : ((p.imagePrefix || '').trim() ? p.imagePrefix.trim() + '.' + slot + '.jpg' : '');
+      var inner = cached ? '<img src="' + cached + '">'
+        : (live ? '<img src="' + encodeURI(live.replace(/^\//, '')) + '" onerror="this.parentNode.textContent=\'' + fb + '\'">' : fb);
+      return '<div class="img-slot"><div class="lbl">' + (slot === 'main' ? 'Главна' : '№' + slot) + '</div>' +
+        '<div class="pv">' + inner + '</div>' +
+        '<input type="file" accept="image/*" id="imgFile-' + idx + '-' + slot + '" onchange="uploadProductImage(' + idx + ',\'' + slot + '\',this)">' +
+        '<div class="b"><button type="button" onclick="document.getElementById(\'imgFile-' + idx + '-' + slot + '\').click()">📤</button>' +
+        '<button type="button" class="x" onclick="removeProductImage(' + idx + ',\'' + slot + '\')">✕</button></div></div>';
+    }).join('') + '</div>';
+
+    var variantHTML =
+      '<div class="toggle-line"><div class="toggle-switch ' + (hasVariants ? 'on' : '') + '" onclick="toggleVariants(' + idx + ')"></div><div class="toggle-label">Варианти с избор (дължина, цвят...)</div></div>';
+    if (hasVariants) {
+      var vg = p.variantGroup;
+      variantHTML += '<div class="variant-box">' +
+        '<label class="field-label" style="margin-top:0;">Име на избора (напр. Дължина)</label>' +
+        '<input type="text" value="' + esc_(vg.label) + '" onchange="' + P + '.variantGroup.label=this.value;">' +
+        (vg.options || []).map(function(o, oi) {
+          return '<div class="variant-row" style="margin-top:8px;">' +
+            '<div><label class="field-label" style="margin-top:0;">Етикет</label><input type="text" value="' + esc_(o.label) + '" onchange="' + P + '.variantGroup.options[' + oi + '].label=this.value;"></div>' +
+            '<div><label class="field-label" style="margin-top:0;">Цена €</label><input type="number" step="0.01" value="' + (o.price || 0) + '" onchange="' + P + '.variantGroup.options[' + oi + '].price=parseFloat(this.value)||0;renderProducts();"></div>' +
+            '<button class="small-btn danger" style="min-width:0;padding:10px 0;" onclick="removeVariantOption(' + idx + ',' + oi + ')"' + (vg.options.length <= 1 ? ' disabled' : '') + '>🗑</button></div>';
+        }).join('') +
+        '<div class="btn-row" style="margin-top:8px;"><button class="small-btn" onclick="addVariantOption(' + idx + ')">+ Добави вариант</button></div>' +
+        '<div class="hint">Цената на продукта по-горе не се ползва - клиентът плаща цената на избрания вариант.</div></div>';
+    }
+
+    return '<div class="edit-box">' +
+      '<label class="field-label">Име</label><input type="text" value="' + esc_(p.name) + '" onchange="' + P + '.name=this.value;renderProducts();">' +
+      '<label class="field-label">ID (уникално, без интервали)</label><input type="text" value="' + esc_(p.id) + '" onchange="' + P + '.id=this.value.trim();">' +
+      '<label class="field-label">Категория</label><select onchange="' + P + '.category=this.value;renderProducts();">' +
+        cats.map(function(cat) { return '<option value="' + cat.id + '"' + (curCat === cat.id ? ' selected' : '') + '>' + esc_(cat.label) + '</option>'; }).join('') + '</select>' +
+      '<div class="row2"><div><label class="field-label">Цена (€)</label><input type="number" step="0.01" value="' + (p.price || 0) + '" onchange="' + P + '.price=parseFloat(this.value)||0;renderProducts();"></div>' +
+        '<div><label class="field-label">Цена (лв)</label><input type="number" step="1" value="' + (p.priceBgn || 0) + '" onchange="' + P + '.priceBgn=parseFloat(this.value)||0;"></div></div>' +
+      '<div class="row2"><div><label class="field-label">"Оригинална" € (зачертана)</label><input type="number" step="0.01" value="' + (p.comparePrice || 0) + '" onchange="' + P + '.comparePrice=parseFloat(this.value)||0;"></div>' +
+        '<div><label class="field-label">"Оригинална" лв</label><input type="number" step="1" value="' + (p.comparePriceBgn || 0) + '" onchange="' + P + '.comparePriceBgn=parseFloat(this.value)||0;"></div></div>' +
+      '<div class="toggle-line"><div class="toggle-switch ' + (p.active !== false ? 'on' : '') + '" onclick="toggleProductField(' + idx + ',\'active\')"></div><div class="toggle-label">Активен (видим на сайта)</div></div>' +
+      '<div class="toggle-line"><div class="toggle-switch ' + (p.isNewListing ? 'on' : '') + '" onclick="toggleProductField(' + idx + ',\'isNewListing\')"></div><div><div class="toggle-label">Нова обява</div><div class="toggle-sub">Скрита, докато не включиш "Покажи новите продукти" в Настройки</div></div></div>' +
+      '<label class="field-label">Снимки</label>' + imgRow +
+      '<div class="row2"><div><label class="field-label">Префикс на снимките</label><input type="text" value="' + esc_(p.imagePrefix) + '" onchange="' + P + '.imagePrefix=this.value.trim();renderProducts();"></div>' +
+        '<div><label class="field-label">Файл на главната</label><input type="text" value="' + esc_(p.imageMain) + '" onchange="' + P + '.imageMain=this.value.trim();renderProducts();"></div></div>' +
+      variantHTML +
+      '<label class="field-label">Кратки точки за преглед (по една на ред)</label><textarea rows="3" onchange="' + P + '.previewFeatures=this.value.split(\'\\n\').map(function(s){return s.trim();}).filter(Boolean);">' + esc_((p.previewFeatures || []).join('\n')) + '</textarea>' +
+      '<label class="field-label">Описание (## Заглавие, после точки - всяка на нов ред)</label><textarea rows="7" onchange="' + P + '.sections=parseSectionsText_(this.value);">' + esc_(sectionsToText_(p.sections)) + '</textarea>' +
+      '<div class="btn-row" style="margin-top:12px;"><button class="small-btn danger" onclick="deleteProduct(' + idx + ')">🗑 Изтрий продукта</button></div>' +
+    '</div>';
+  }
+
+  // ── Варианти ──
+  function toggleVariants(idx) {
+    var p = siteData.products[idx];
+    if (p.variantGroup && p.variantGroup.options) {
+      if (!confirm('Изключи вариантите? Настройките им ще се изтрият.')) return;
+      p.variantGroup = null;
+    } else {
+      p.variantGroup = { label: '', options: [{ label: '', price: p.price || 0 }] };
+    }
+    renderProducts();
+  }
+  function addVariantOption(idx) { var p = siteData.products[idx]; p.variantGroup.options.push({ label: '', price: p.price || 0 }); renderProducts(); }
+  function removeVariantOption(idx, oi) {
+    var o = siteData.products[idx].variantGroup.options;
+    if (o.length <= 1) return;
+    o.splice(oi, 1); renderProducts();
+  }
+
+  // ── Снимки (през Code.gs) ──
+  function fileToBase64_(blob) {
+    return new Promise(function(resolve, reject) {
+      var r = new FileReader();
+      r.onload = function() { resolve(String(r.result).split(',')[1] || ''); };
+      r.onerror = reject;
+      r.readAsDataURL(blob);
+    });
+  }
+  function compressImage_(file, maxSide, quality) {
+    return new Promise(function(resolve) {
+      var url = URL.createObjectURL(file), img = new Image();
+      img.onload = function() {
+        try {
+          var max = maxSide || 1400, w = img.naturalWidth, h = img.naturalHeight;
+          var scale = Math.min(1, max / Math.max(w, h));
+          var cv = document.createElement('canvas');
+          cv.width = Math.round(w * scale); cv.height = Math.round(h * scale);
+          var ctx = cv.getContext('2d');
+          ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
+          ctx.drawImage(img, 0, 0, cv.width, cv.height);
+          cv.toBlob(function(b) { URL.revokeObjectURL(url); resolve(b && b.size < file.size ? b : file); }, 'image/jpeg', quality || 0.82);
+        } catch (e) { URL.revokeObjectURL(url); resolve(file); }
+      };
+      img.onerror = function() { URL.revokeObjectURL(url); resolve(file); };
+      img.src = url;
+    });
+  }
+  function thumbPath_(path) { return String(path).replace(/\.[^./]+$/, '') + '.t.jpg'; }
+  async function tgUpload_(blob, path) {
+    var b64 = await fileToBase64_(blob);
+    var r = await postAction({ action: 'tgUploadImage', path: path, content: b64 });
+    return r && r.success ? { ok: true } : { ok: false, message: (r && r.message) || 'Грешка' };
+  }
+
+  async function uploadProductImage(idx, slot, inputEl) {
+    var file = inputEl.files && inputEl.files[0];
+    if (!file) return;
+    var p = siteData.products[idx];
+    if (!p.id || !p.id.trim()) { toast('Първо задай ID на продукта.', 'error'); inputEl.value = ''; return; }
+    var isMain = (slot === 'main');
+    var destPath = isMain
+      ? ((p.imageMain && p.imageMain.trim()) ? p.imageMain.trim() : ('products/' + p.id.trim() + '/main.jpg'))
+      : (((p.imagePrefix && p.imagePrefix.trim()) ? p.imagePrefix.trim() : ('products/' + p.id.trim() + '/photo')) + '.' + slot + '.jpg');
+    productImgPreviews[p.id + '_' + slot] = URL.createObjectURL(file);
+    toast('Качване на снимката...', 'success');
+    var toUpload = /\.jpe?g$/i.test(destPath) ? await compressImage_(file, 1400, 0.82) : file;
+    var r = await tgUpload_(toUpload, destPath);
+    if (!r.ok) { toast('Грешка при качване: ' + r.message, 'error'); inputEl.value = ''; return; }
+    try { await tgUpload_(await compressImage_(file, 260, 0.7), thumbPath_(destPath)); } catch (e) {}
+    if (isMain) p.imageMain = destPath;
+    else if (!p.imagePrefix || !p.imagePrefix.trim()) p.imagePrefix = destPath.replace(/\.\d+\.jpg$/, '');
+    renderProducts();
+    toast('Снимката е качена! Натисни "💾 Запази промените", за да се запишат пътищата.', 'success');
+  }
+
+  async function removeProductImage(idx, slot) {
+    var p = siteData.products[idx], isMain = (slot === 'main');
+    var destPath = isMain ? (p.imageMain && p.imageMain.trim()) : ((p.imagePrefix && p.imagePrefix.trim()) ? p.imagePrefix.trim() + '.' + slot + '.jpg' : '');
+    if (!destPath) { toast('Няма качена снимка в този слот.', 'error'); return; }
+    if (!confirm('Премахни тази снимка? Файлът се изтрива и от GitHub - необратимо.')) return;
+    toast('Премахване...', 'success');
+    var r = await postAction({ action: 'tgDeleteImage', path: destPath });
+    if (!r || !r.success) { toast('Грешка: ' + ((r && r.message) || ''), 'error'); return; }
+    try { await postAction({ action: 'tgDeleteImage', path: thumbPath_(destPath) }); } catch (e) {}
+    delete productImgPreviews[(p.id || ('idx' + idx)) + '_' + slot];
+    if (isMain) p.imageMain = '';
+    renderProducts();
+    toast('Снимката е премахната. Натисни "💾 Запази промените".', 'success');
+  }
+
+  async function urlExists_(url) {
+    try { var r = await fetch(url + (url.indexOf('?') === -1 ? '?' : '&') + 't=' + Date.now(), { method: 'HEAD' }); return r.ok; } catch (e) { return false; }
+  }
+  var optimizing_ = false;
+  async function optimizeAllImages() {
+    if (optimizing_ || !siteData) return;
+    if (!confirm('Ще се оптимизират всички качени снимки на всички продукти. Снимките се презаписват на същите места. Може да отнеме няколко минути - не затваряй приложението.\n\nПродължи?')) return;
+    optimizing_ = true;
+    var btn = document.getElementById('optimizeBtn'), status = document.getElementById('optimizeStatus');
+    btn.disabled = true; status.style.display = 'block';
+    var saved = 0, optimized = 0, thumbs = 0, skipped = 0, failed = 0, done = 0;
+    function show(m) { status.textContent = m + '\n\nОптимизирани: ' + optimized + ' · Миниатюри: ' + thumbs + ' · Пропуснати: ' + skipped + ' · Грешки: ' + failed + ' · Спестено: ' + (saved / 1048576).toFixed(1) + ' MB'; }
+    try {
+      for (var pi = 0; pi < siteData.products.length; pi++) {
+        var p = siteData.products[pi], paths = [];
+        if (p.imageMain && p.imageMain.trim()) paths.push(p.imageMain.trim());
+        var prefix = (p.imagePrefix || '').trim();
+        if (prefix) {
+          var misses = 0;
+          for (var n = 1; n <= 12 && misses < 2; n++) {
+            var gp = prefix + '.' + n + '.jpg';
+            if (await urlExists_(gp)) { paths.push(gp); misses = 0; } else misses++;
+          }
+        }
+        for (var i = 0; i < paths.length; i++) {
+          var path = paths[i]; done++;
+          show('Продукт ' + (pi + 1) + '/' + siteData.products.length + ' — снимка ' + (i + 1) + '/' + paths.length);
+          try {
+            var res = await fetch(path + '?t=' + Date.now());
+            if (!res.ok) { skipped++; continue; }
+            var blob = await res.blob(), size = blob.size;
+            if (/\.jpe?g$/i.test(path) && size > 350 * 1024) {
+              var small = await compressImage_(blob, 1400, 0.82);
+              if (small.size < size * 0.9) {
+                var up = await tgUpload_(small, path);
+                if (up.ok) { saved += size - small.size; optimized++; blob = small; } else { failed++; continue; }
+              } else skipped++;
+            } else skipped++;
+            var tp = thumbPath_(path);
+            if (!(await urlExists_(tp))) {
+              var tu = await tgUpload_(await compressImage_(blob, 260, 0.7), tp);
+              if (tu.ok) thumbs++; else failed++;
+            }
+          } catch (e) { failed++; }
+        }
+      }
+      show('Готово ✓ Обработени: ' + done);
+      toast('Оптимизацията приключи. Спестено ' + (saved / 1048576).toFixed(1) + ' MB.', 'success');
+    } catch (e) { toast('Грешка: ' + (e.message || e), 'error'); }
+    finally { optimizing_ = false; btn.disabled = false; }
+  }
+
+  // ── Настройки ──
+  function renderSettings() {
+    var s = siteData.settings, cats = getCategories_();
+    var chance = (s.rewardDiscountChance != null) ? s.rewardDiscountChance : 0;
+    var percent = (s.rewardDiscountPercent != null) ? s.rewardDiscountPercent : 10;
+    function tog(key, label, sub, on) {
+      return '<div class="toggle-line"><div class="toggle-switch ' + (on ? 'on' : '') + '" onclick="toggleSetting(\'' + key + '\')"></div><div><div class="toggle-label">' + label + '</div>' + (sub ? '<div class="toggle-sub">' + sub + '</div>' : '') + '</div></div>';
+    }
+    document.getElementById('settingsBody').innerHTML =
+      '<div class="card"><div class="section-title">Категории на продуктите</div>' +
+        '<div class="hint" style="margin:0 0 8px;">Показват се като табове в "Продукти" на сайта. Първата е избрана по подразбиране. "Всички" се добавя автоматично.</div>' +
+        cats.map(function(cat, i) {
+          var used = siteData.products.filter(function(p) { return (p.category || cats[0].id) === cat.id; }).length;
+          return '<div style="display:grid;grid-template-columns:1fr auto auto auto;gap:6px;align-items:center;margin-bottom:8px;">' +
+            '<div><input type="text" value="' + esc_(cat.label) + '" onchange="renameCategory(' + i + ',this.value)"><div class="toggle-sub" style="margin-top:2px;">' + used + ' продукта</div></div>' +
+            '<button class="small-btn" style="min-width:0;padding:9px 12px;" onclick="moveCategory(' + i + ',-1)"' + (i === 0 ? ' disabled' : '') + '>↑</button>' +
+            '<button class="small-btn" style="min-width:0;padding:9px 12px;" onclick="moveCategory(' + i + ',1)"' + (i === cats.length - 1 ? ' disabled' : '') + '>↓</button>' +
+            '<button class="small-btn danger" style="min-width:0;padding:9px 12px;" onclick="deleteCategory(' + i + ')"' + (cats.length <= 1 ? ' disabled' : '') + '>🗑</button></div>';
+        }).join('') +
+        '<div class="btn-row"><button class="small-btn accent" onclick="addCategory()">+ Добави категория</button></div></div>' +
+
+      '<div class="card"><div class="section-title">Нови обяви</div>' +
+        tog('showNewListings', 'Покажи новите продукти', 'Продуктите, маркирани като "Нова обява", стават видими на сайта', s.showNewListings === true) + '</div>' +
+
+      '<div class="card"><div class="section-title">Домейн на сайта</div>' +
+        '<input type="text" value="' + esc_(s.siteDomain || '') + '" placeholder="https://zenairpods.store/" onchange="siteData.settings.siteDomain=this.value.trim();">' +
+        '<div class="hint">Използва се в имейли (напр. поканата за ревю).</div></div>' +
+
+      '<div class="card"><div class="section-title">Контакти</div>' +
+        tog('contactModeForm', 'Контактна форма вместо телефон', 'Изключено = телефонен номер · Включено = контактна форма', s.contactMode === 'form') +
+        '<label class="field-label">Телефонен номер</label><input type="text" value="' + esc_(s.phone || '') + '" placeholder="0876 127 997" onchange="siteData.settings.phone=this.value.trim();"></div>' +
+
+      '<div class="card"><div class="section-title">Ревюта</div>' +
+        tog('showManualReviews', 'Фиксирани ревюта', 'Показва предварително написаните ревюта по-долу', s.showManualReviews === true) +
+        tog('showClientReviews', 'Реални ревюта от клиенти', 'Показва одобрените ревюта (таб "Ревюта")', s.showClientReviews === true) +
+        '<label class="field-label">Фиксирани ревюта</label><div id="manualReviewsList">' + manualReviewsHTML_() + '</div>' +
+        '<div class="btn-row" style="margin-top:6px;"><button class="small-btn" onclick="addManualReview()">+ Добави ревю</button></div></div>' +
+
+      '<div class="card"><div class="section-title">Награда след одобрено ревю</div>' +
+        '<label class="field-label">Клиенти с промокод за отстъпка (вместо кейс): <b id="rwChanceVal">' + chance + '%</b></label>' +
+        '<input class="range" type="range" min="0" max="100" step="5" value="' + chance + '" oninput="onReward_(\'rewardDiscountChance\',this.value)">' +
+        '<label class="field-label">Размер на отстъпката: <b id="rwPercentVal">' + percent + '%</b></label>' +
+        '<input class="range" type="range" min="5" max="50" step="5" value="' + percent + '" oninput="onReward_(\'rewardDiscountPercent\',this.value)">' +
+        '<div class="hint" id="rwSummary">' + rewardSummary_(chance, percent) + '</div></div>';
+  }
+
+  function rewardSummary_(chance, percent) {
+    if (chance === 0) return '📦 Всички клиенти, оставили ревю, получават код за безплатен силиконов кейс.';
+    if (chance === 100) return '💸 Всички клиенти, оставили ревю, получават промокод за -' + percent + '% отстъпка.';
+    return '🎲 От всеки 100 клиенти: ' + chance + ' получават -' + percent + '% промокод, ' + (100 - chance) + ' - безплатен кейс.';
+  }
+  function onReward_(key, val) {
+    siteData.settings[key] = parseInt(val, 10) || 0;
+    var s = siteData.settings;
+    var ch = (s.rewardDiscountChance != null) ? s.rewardDiscountChance : 0, pc = (s.rewardDiscountPercent != null) ? s.rewardDiscountPercent : 10;
+    document.getElementById('rwChanceVal').textContent = ch + '%';
+    document.getElementById('rwPercentVal').textContent = pc + '%';
+    document.getElementById('rwSummary').textContent = rewardSummary_(ch, pc);
+  }
+  function toggleSetting(key) {
+    var s = siteData.settings;
+    if (key === 'contactModeForm') s.contactMode = (s.contactMode === 'form') ? 'phone' : 'form';
+    else s[key] = !s[key];
+    renderSettings();
+  }
+  function manualReviewsHTML_() {
+    var list = siteData.settings.manualReviews || [];
+    if (!list.length) return '<div class="toggle-sub">Няма фиксирани ревюта.</div>';
+    return list.map(function(r, i) {
+      var M = 'siteData.settings.manualReviews[' + i + ']';
+      return '<div class="variant-box" style="margin-bottom:8px;">' +
+        '<div class="row2"><div><label class="field-label" style="margin-top:0;">Автор</label><input type="text" value="' + esc_(r.author) + '" onchange="' + M + '.author=this.value;"></div>' +
+        '<div><label class="field-label" style="margin-top:0;">Куриер</label><input type="text" value="' + esc_(r.courier) + '" onchange="' + M + '.courier=this.value;"></div></div>' +
+        '<label class="field-label">Текст</label><textarea rows="3" onchange="' + M + '.text=this.value;">' + esc_(r.text) + '</textarea>' +
+        '<div class="btn-row" style="margin-top:6px;"><button class="small-btn danger" onclick="removeManualReview(' + i + ')">🗑 Премахни</button></div></div>';
+    }).join('');
+  }
+  function addManualReview() {
+    var s = siteData.settings;
+    if (!s.manualReviews) s.manualReviews = [];
+    s.manualReviews.push({ text: '', author: '', courier: 'Econt' });
+    renderSettings();
+  }
+  function removeManualReview(i) { siteData.settings.manualReviews.splice(i, 1); renderSettings(); }
+
+  // ── Запис ──
+  function validateProducts_() {
+    var seen = {};
+    for (var i = 0; i < siteData.products.length; i++) {
+      var p = siteData.products[i], name = (p.name || '').trim(), id = (p.id || '').trim();
+      if (!name) return 'Продукт #' + (i + 1) + ' няма име.';
+      if (!id) return 'Продукт "' + name + '" няма ID.';
+      if (/\s/.test(id)) return 'ID-то на "' + name + '" съдържа интервал(и).';
+      if (seen[id]) return 'Две продукта имат едно и също ID ("' + id + '").';
+      seen[id] = true;
+    }
+    return null;
+  }
+  var saving_ = false;
+  async function saveSite() {
+    if (!siteData || saving_) return;
+    var err = validateProducts_();
+    if (err) { toast('Не е запазено — ' + err, 'error'); return; }
+    var d = siteData.settings.siteDomain;
+    if (d) {
+      if (!/^https?:\/\//.test(d)) d = 'https://' + d;
+      if (!d.endsWith('/')) d += '/';
+      siteData.settings.siteDomain = d;
+    }
+    saving_ = true;
+    var btn = document.getElementById('saveBtn');
+    btn.disabled = true; btn.textContent = 'Запазване...';
+    try {
+      var r = await postAction({ action: 'tgSaveSite', content: siteData });
+      toast(r && r.success ? 'Запазено успешно! Сайтът се обновява до 1-2 минути.' : ('Грешка: ' + ((r && r.message) || 'неуспешен запис')), r && r.success ? 'success' : 'error');
+    } catch (e) {
+      toast('Грешка при връзка: ' + e.message, 'error');
+    } finally {
+      saving_ = false; btn.disabled = false; btn.textContent = '💾 Запази промените';
     }
   }
 
