@@ -1001,7 +1001,7 @@ function updateOfficeLabel() {
             officeInput.placeholder = 'Напр: Econt офис София, ул. Витоша 5';
         } else {
             officeLabel.textContent = 'Офис на куриера *';
-            officeInput.placeholder = 'Изберете куриер';
+            officeInput.placeholder = 'Посочете точния еконт офис на куриера за доставка';
         }
     }
 }
